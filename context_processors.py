@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 
 from enrollment.models.enrollment import ActiveEnrollment
 from faction.models.faction import Faction
-from ..core.menus import (
+from .menus import (
     FACULTY_ADMIN_MENU,
     ATTENDEE_MENU,
     LEADER_MENU,

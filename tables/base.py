@@ -1,4 +1,4 @@
-# pages/tables/base.py
+# core/tables/base.py
 
 import django_tables2 as tables
 from core.mixins.tables import ActionsColumnMixin, ActionUrlMixin

@@ -410,7 +410,7 @@ class BaseManageView(TemplateView):
             {
                 "name": table_name.replace("_", " ").title(),
                 "table": table,
-                "create_url": self.get_create_url(table_name),
+                "create_url": self.get_create_url(table),
                 "icon": getattr(table, "add_icon", "fas fa-plus"),
             }
             for table_name, table in tables.items()
@@ -423,15 +423,15 @@ class BaseManageView(TemplateView):
         )
         return context
 
-    def get_create_url(self, table_name):
+    def get_create_url(self, table):
         """
-        Retrieves the URL for creating new entries in the specified table. This method currently
-        returns a placeholder URL, which can be overridden in subclasses to provide the actual
+        Retrieves the URL for creating new entries in the specified table. This method currently 
+        returns a placeholder URL, which can be overridden in subclasses to provide the actual 
         creation URL for the table.
 
         Args:
             self: The instance of the class.
-            table_name (str): The name of the table for which to retrieve the creation URL.
+            table (str): The name of the table for which to retrieve the creation URL.
 
         Returns:
             str: The creation URL for the specified table, currently a placeholder.

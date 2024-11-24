@@ -1,12 +1,11 @@
 # core/mixins/tables.py
 
+import logging
 import django_tables2 as tables
 from django.urls import reverse, NoReverseMatch
 from django.utils.safestring import mark_safe
-from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.text import camel_case_to_spaces
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -54,15 +53,12 @@ class ActionUrlMixin:
         Raises:
             NoReverseMatch: If the URL cannot be reversed due to an invalid name or parameters.
         """
-        print(f"action:: {action}")
+
         custom_url_info = getattr(self, "urls", {}).get(action, {})
-        print(f"custom: {custom_url_info}")
         default_url_info = self.default_urls.get(action, {})
-        print(f"defaults: {default_url_info}")
         action_url_info = {**default_url_info, **custom_url_info}
-        print(f"info: {action_url_info}")
         url_name = action_url_info.get("name")
-        print(f"name: {url_name}")
+
         if url_name is None:
             # If no URL name, log a warning and return None or a default link
             logger.warning(f"URL name for action '{action}' is None.")
@@ -103,6 +99,8 @@ class ActionUrlMixin:
             elif record:
                 value = self.get_nested_attr(record, attr_path)
                 url_kwargs[key] = value or getattr(record, "pk", None)
+            else:
+                url_kwargs[key] = attr_path
         return url_kwargs
 
     def get_nested_attr(self, obj, attr_path):
@@ -187,7 +185,9 @@ class ActionsColumnMixin(ActionUrlMixin, tables.Table):
         """
         actions = []
         # Combine default and custom actions
-        all_actions = list(dict.fromkeys(list(self.urls.keys()) + self.available_actions))
+        all_actions = list(
+            dict.fromkeys(list(self.urls.keys()) + self.available_actions)
+        )
         for action in all_actions:
             if action == "add" and not include_add:
                 continue
