@@ -7,11 +7,13 @@ from django.views.generic import (
     CreateView,
     UpdateView,
     DeleteView,
+    FormView
 )
 from django.contrib import messages
 from django.utils.translation import gettext_lazy as _
-from django.shortcuts import redirect
-from django_tables2 import SingleTableView, RequestConfig
+from django.shortcuts import redirect, get_object_or_404
+from django_tables2 import SingleTableView, RequestConfig, SingleTableMixin
+from django.http import JsonResponse
 
 from ..mixins.views import FormMessagesMixin
 
@@ -438,3 +440,257 @@ class BaseManageView(TemplateView):
         """
 
         return "#"
+
+
+class BaseIndexByFilterTableView(SingleTableMixin, ListView):
+    """
+    Base class for views that display a table filtered by a specified model object. This class 
+    extends SingleTableMixin and ListView to provide functionality for filtering data based on URL 
+    parameters, allowing for dynamic table rendering based on the resolved filter object.
+
+    Attributes:
+        lookup_keys (list): An ordered list of keys used to resolve URL parameters for filtering.
+        filter_field (str): The field in the model to filter by.
+        filter_model (type): The model used to resolve the lookup value.
+        context_object_name_for_filter (str): The name of the context variable for the filter 
+            object.
+        table_class (type): The table class used for rendering with django_tables2.
+
+    Methods:
+        get_filter_value(): Retrieves the filter value from the URL parameters based on the 
+            specified lookup keys.
+        get_filter_object(filter_value): Resolves the filter object using the filter model and the
+            filter value.
+        get_queryset(): Filters the queryset based on the resolved filter object and filter field.
+        get_context_data(**kwargs): Includes the filter object in the context for rendering.
+        get_table_data(): Provides the filtered queryset to the django_tables2 table.
+
+    Args:
+        self: The instance of the class.
+        **kwargs: Additional keyword arguments to pass to the superclass methods.
+
+    Returns:
+        dict: A dictionary containing the context data, including the filter object and filtered 
+            queryset.
+    """
+
+
+    # Defaults: Override these in subclasses
+    lookup_keys = ["slug"]  # Ordered list of lookup keys for URL kwargs
+    filter_field = None  # Field to filter by in the model
+    filter_model = None  # Model to resolve the lookup value
+    context_object_name_for_filter = None  # Name of the context variable for the filter object
+    table_class = None  # Table class for django_tables2 rendering
+
+    def get_filter_value(self):
+        """
+        Retrieves the filter value from the URL parameters based on the specified lookup keys. This 
+        method iterates through the defined lookup keys and returns the corresponding value from 
+        the URL kwargs, raising an error if no valid key is found.
+
+        Args:
+            self: The instance of the class.
+
+        Returns:
+            str: The filter value extracted from the URL parameters.
+
+        Raises:
+            ValueError: If no valid lookup key is found in the URL parameters.
+        """
+
+        for key in self.lookup_keys:
+            if key in self.kwargs:
+                return self.kwargs[key]
+        raise ValueError("No valid lookup key found in URL parameters.")
+
+    def get_filter_object(self, filter_value):
+        """
+        Retrieves the filter object based on the provided filter value and the specified filter 
+        model. This method checks if the filter model is defined, determines the appropriate lookup
+        field based on the filter value, and returns the corresponding object or raises a 404 error
+        if not found.
+
+        Args:
+            self: The instance of the class.
+            filter_value (str): The value used to look up the filter object.
+
+        Returns:
+            object: The filter object retrieved from the filter model.
+
+        Raises:
+            ValueError: If the `filter_model` is not specified in the subclass.
+            Http404: If no object matching the filter value is found in the filter model.
+        """
+
+        if not self.filter_model:
+            raise ValueError("`filter_model` must be specified in the subclass.")
+        
+        # Determine if the lookup is numeric (assume PK) or not
+        lookup_field = "pk" if filter_value.isdigit() else "slug"
+        return get_object_or_404(self.filter_model, **{lookup_field: filter_value})
+
+    def get_queryset(self):
+        """
+        Retrieves the queryset for the view, applying filtering based on the resolved filter 
+        object. This method checks if the filter field is specified, retrieves the filter value,
+        and returns a filtered queryset based on the specified field and filter object.
+
+        Args:
+            self: The instance of the class.
+
+        Returns:
+            QuerySet: The filtered queryset based on the specified filter field and filter object.
+
+        Raises:
+            ValueError: If the `filter_field` is not specified in the subclass.
+        """
+
+        if not self.filter_field:
+            raise ValueError("`filter_field` must be specified in the subclass.")
+
+        filter_value = self.get_filter_value()
+        filter_object = self.get_filter_object(filter_value)
+        return self.model.objects.filter(**{self.filter_field: filter_object})
+
+    def get_context_data(self, **kwargs):
+        """
+        Retrieves and returns the context data for the template, including the resolved filter 
+        object. This method enhances the context by adding the filter object under a specified 
+        context variable name, allowing for better integration of filtering functionality in the 
+        rendered view.
+
+        Args:
+            self: The instance of the class.
+            **kwargs: Additional keyword arguments to pass to the superclass method.
+
+        Returns:
+            dict: A dictionary containing the context data, including the filter object if 
+            applicable.
+        """
+
+        context = super().get_context_data(**kwargs)
+
+        filter_value = self.get_filter_value()
+        filter_object = self.get_filter_object(filter_value)
+
+        if self.context_object_name_for_filter:
+            context[self.context_object_name_for_filter] = filter_object
+
+        return context
+
+    def get_table_data(self):
+        """
+        Retrieves the data for the table by obtaining the filtered queryset. This method serves as 
+        a bridge to access the queryset, allowing the table to be populated with the relevant data
+        for display.
+
+        Args:
+            self: The instance of the class.
+
+        Returns:
+            QuerySet: The queryset containing the data for the table.
+        """
+
+        return self.get_queryset()
+
+
+class BaseFormView(FormView):
+    """
+    A base view for handling form submissions with custom success and error messages.  This view 
+    manages both valid and invalid form submissions, providing appropriate feedback and handling 
+    AJAX requests.
+
+    Attributes:
+        success_message (str): A custom success message.
+        error_message (str): A custom error message.
+        action (str): Action context for display purposes.
+
+    Methods:
+        form_valid(form): Handles a valid form submission, adds a success message, and manages AJAX 
+            responses.
+        form_invalid(form): Handles an invalid form submission, adds an error message, and manages 
+            AJAX responses.
+        get_context_data(**kwargs): Adds additional context to the template.
+        get_success_url(): Determines the URL to redirect to after a successful form submission.
+    """
+
+    success_message = None
+    error_message = None
+    action = None  # Action context
+
+    def form_valid(self, form):
+        """
+        Handles a valid form submission.
+        Adds a success message and handles AJAX responses.
+
+        Args:
+            form (Form): The submitted form.
+
+        Returns:
+            HttpResponse: A response object, which may be a redirect or a JSON response for AJAX requests.
+        """
+        response = super().form_valid(form)
+
+        # Add a success message if provided
+        if self.success_message:
+            messages.success(self.request, self.success_message)
+
+        # Handle AJAX requests
+        if self.request.is_ajax():
+            return JsonResponse({"success": True, "redirect_url": self.get_success_url()})
+
+        return response
+
+    def form_invalid(self, form):
+        """
+        Handles an invalid form submission.
+        Adds an error message and handles AJAX responses.
+
+        Args:
+            form (Form): The submitted form.
+
+        Returns:
+            HttpResponse: A response object, which may be a redirect or a JSON response for AJAX 
+                requests.
+        """
+        response = super().form_invalid(form)
+
+        # Add an error message if provided
+        if self.error_message:
+            messages.error(self.request, self.error_message)
+
+        # Handle AJAX responses
+        if self.request.is_ajax():
+            return JsonResponse({"success": False, "errors": form.errors}, status=400)
+
+        return response
+
+    def get_context_data(self, **kwargs):
+        """
+        Adds additional context to the template.
+
+        Args:
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            dict: The updated context dictionary.
+        """
+        context = super().get_context_data(**kwargs)
+        if self.action:
+            context["action"] = self.action
+        return context
+
+    def get_success_url(self):
+        """
+        Determines the URL to redirect to after a successful form submission.
+        Can be overridden in subclasses or passed as a class attribute.
+
+        Returns:
+            str: The success URL.
+
+        Raises:
+            NotImplementedError: If no success_url is specified for BaseFormView.
+        """
+        if hasattr(self, "success_url") and self.success_url:
+            return self.success_url
+        raise NotImplementedError("No success_url specified for BaseFormView.")
