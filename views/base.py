@@ -15,7 +15,7 @@ from django.shortcuts import redirect, get_object_or_404
 from django_tables2 import SingleTableView, RequestConfig, SingleTableMixin
 from django.http import JsonResponse
 
-from ..mixins.views import FormMessagesMixin
+from ..mixins.views import FormMessagesMixin, BaseViewMixin
 
 
 class BaseTemplateView(TemplateView):
@@ -231,7 +231,7 @@ class BaseTableListView(SingleTableView):
         return context
 
 
-class BaseCreateView(FormMessagesMixin, CreateView):
+class BaseCreateView(FormMessagesMixin, CreateView, BaseViewMixin):
     """
     Base class for creating views that provides success and error messages. This class extends the
     CreateView and includes functionality for displaying messages upon successful or failed
@@ -247,7 +247,7 @@ class BaseCreateView(FormMessagesMixin, CreateView):
     error_message = _("There was an error creating the item.")
 
 
-class BaseUpdateView(FormMessagesMixin, UpdateView):
+class BaseUpdateView(FormMessagesMixin, UpdateView, BaseViewMixin):
     """
     Base class for updating views that provides success and error messages. This class extends the
     UpdateView and includes functionality for displaying messages upon successful or failed updates
@@ -263,7 +263,7 @@ class BaseUpdateView(FormMessagesMixin, UpdateView):
     error_message = _("There was an error updating the item.")
 
 
-class BaseDeleteView(DeleteView):
+class BaseDeleteView(DeleteView, BaseViewMixin):
     """
     Base class for delete views that provides success and error messages upon deletion. This
     class extends the DeleteView and includes functionality to display messages based on the

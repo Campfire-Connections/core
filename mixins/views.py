@@ -7,7 +7,7 @@ from django.contrib.auth.mixins import (
 )
 from django.contrib import messages
 from django.shortcuts import redirect
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse, NoReverseMatch
 from django.http import JsonResponse
 from django.core.exceptions import PermissionDenied
 
@@ -251,3 +251,49 @@ class DynamicLoginRedirectMixin(LoginRequiredMixin):
         elif self.request.user.is_superuser:
             return "/admin/dashboard/"
         return super().get_redirect_url()
+
+
+class BaseViewMixin:
+    """
+    A base mixin for all views, providing utilities for dynamic success URLs.
+    """
+    success_url_pattern = None  # Define in child views if needed
+    success_url_params = None   # Dictionary of kwargs to reverse URL
+
+    def get_success_url(self):
+        """
+        Dynamically generate the success URL using `success_url_pattern` and `success_url_params`.
+        """
+        if not self.success_url_pattern:
+            raise ImproperlyConfigured(
+                f"{self.__class__.__name__} is missing a `success_url_pattern`. "
+                "Define `success_url_pattern` or override `get_success_url`."
+            )
+        
+        params = self.get_success_url_params()
+        try:
+            return reverse(self.success_url_pattern, kwargs=params)
+        except NoReverseMatch as e:
+            raise ImproperlyConfigured(
+                f"Failed to reverse URL for pattern '{self.success_url_pattern}' with params {params}: {e}"
+            )
+
+    def get_success_url_params(self):
+        """
+        Return the parameters required for reversing `success_url_pattern`.
+        Override in child classes if needed.
+        """
+        if self.success_url_params:
+            return self.success_url_params
+
+        # Default to the model's slug or pk
+        if hasattr(self.object, "slug"):
+            return {"slug": self.object.slug}
+        elif hasattr(self.object, "pk"):
+            return {"pk": self.object.pk}
+        else:
+            raise ImproperlyConfigured(
+                f"{self.__class__.__name__} cannot determine success URL parameters. "
+                "Define `success_url_params` or override `get_success_url_params`."
+            )
+
