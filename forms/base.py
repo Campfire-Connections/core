@@ -70,7 +70,8 @@ class BaseForm(forms.ModelForm):
         """
 
         cleaned_data = super().clean()
-        # Add custom validations here
+        if 'name' in cleaned_data and len(cleaned_data['name']) < 3:
+            self.add_error('name', _("Name must be at least 3 characters long."))
         return cleaned_data
 
     def validate_field_combinations(self, field1, field2):
