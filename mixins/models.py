@@ -1,6 +1,8 @@
 # core/mixins/models.py
 
 import uuid
+from PIL import Image
+from io import BytesIO
 from rest_framework import serializers
 from datetime import datetime
 from django.conf import settings
@@ -11,7 +13,7 @@ from django.utils.timezone import now
 from django.utils.text import slugify
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 
 # Enhanced NameDescriptionMixin with validation and better UX
@@ -25,7 +27,7 @@ class NameDescriptionMixin(models.Model):
     def clean(self):
         """Optional custom validation."""
         if len(self.name) < 3:
-            raise ValidationError(_('Name must be at least 3 characters long.'))
+            raise ValidationError(_("Name must be at least 3 characters long."))
 
     class Meta:
         abstract = True
@@ -37,11 +39,10 @@ class TimestampMixin(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def formatted_creation_date(self):
-        return self.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        return self.created_at.strftime("%Y-%m-%d %H:%M:%S")
 
     class Meta:
         abstract = True
-
 
 
 # SoftDeleteMixin with a restore method and query manager for soft-deleted records
@@ -76,9 +77,27 @@ class SoftDeleteMixin(models.Model):
 
 # Enhanced AuditMixin with last activity tracking
 class AuditMixin(models.Model):
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="created_%(class)s_set", on_delete=models.SET_NULL, null=True, blank=True)
-    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="updated_%(class)s_set", on_delete=models.SET_NULL, null=True, blank=True)
-    last_activity_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="last_activity_%(class)s_set", on_delete=models.SET_NULL, null=True, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="created_%(class)s_set",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="updated_%(class)s_set",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    last_activity_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="last_activity_%(class)s_set",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
 
     def save(self, *args, **kwargs):
         """Automatically set last_activity_by to updated_by."""
@@ -90,9 +109,10 @@ class AuditMixin(models.Model):
         abstract = True
 
 
-# Enhanced SlugMixin with support for different fields and custom slug patterns
 class SlugMixin(models.Model):
-    slug = models.SlugField(max_length=255, unique=True, blank=True)
+    slug = models.SlugField(max_length=255, blank=True)
+
+    context_field = None  # Define the parent context field
 
     def generate_slug(self, field=None, pattern=None):
         """
@@ -100,30 +120,45 @@ class SlugMixin(models.Model):
         pattern: E.g., '{name}-{date}'
         """
         if pattern:
-            return slugify(pattern.format(
-                name=getattr(self, 'name', ''),
-                date=now().strftime('%Y-%m-%d'),
-                random=uuid.uuid4().hex[:6]  # Random string to ensure uniqueness
-            ))
+            return slugify(
+                pattern.format(
+                    name=getattr(self, "name", ""),
+                    date=now().strftime("%Y-%m-%d"),
+                    random=uuid.uuid4().hex[:6],  # Random string to ensure uniqueness
+                )
+            )
 
         if field and hasattr(self, field):
             return slugify(f"{getattr(self, field)}")
-        elif hasattr(self, 'name'):
+        elif hasattr(self, "name"):
             return slugify(f"{self.name}")
-        elif hasattr(self, 'title'):
+        elif hasattr(self, "title"):
             return slugify(f"{self.title}")
         else:
             return slugify(str(self))
 
+    def is_slug_unique(self, slug):
+        """
+        Checks if a slug is unique within the specified context.
+        """
+        filters = {"slug": slug}
+        if self.context_field and hasattr(self, self.context_field):
+            filters[self.context_field] = getattr(self, self.context_field)
+        return not self.__class__.objects.filter(**filters).exists()
+
     def save(self, *args, **kwargs):
+        """
+        Automatically generates a slug, ensuring uniqueness within the specified context.
+        """
         if not self.slug:
             self.slug = self.generate_slug()
             original_slug = self.slug
             counter = 1
-            # Ensure slug uniqueness
-            while self.__class__.objects.filter(slug=self.slug).exists():
+
+            while not self.is_slug_unique(self.slug):
                 self.slug = f"{original_slug}-{counter}"
                 counter += 1
+
         super().save(*args, **kwargs)
 
     class Meta:
@@ -147,7 +182,7 @@ class OrderedModelMixin(models.Model):
 
     class Meta:
         abstract = True
-        ordering = ['order']
+        ordering = ["order"]
 
 
 # ActiveMixin with helper methods to activate/deactivate objects
@@ -185,9 +220,9 @@ class TrackChangesMixin(models.Model):
 
     def save(self, *args, **kwargs):
         if self.pk:
-            self.change_message = 'Updated: {}'.format(', '.join(self.changed_fields))
+            self.change_message = "Updated: {}".format(", ".join(self.changed_fields))
         else:
-            self.change_message = 'Created'
+            self.change_message = "Created"
         super().save(*args, **kwargs)
 
     @property
@@ -197,7 +232,7 @@ class TrackChangesMixin(models.Model):
         old_values = self.__class__.objects.get(pk=self.pk)
         changed_fields = []
         for field in self._meta.get_fields():
-            if not hasattr(field, 'attname'):
+            if not hasattr(field, "attname"):
                 continue
             old_value = getattr(old_values, field.attname, None)
             new_value = getattr(self, field.attname, None)
@@ -213,7 +248,7 @@ class TrackChangesMixin(models.Model):
 class GenericRelationMixin(models.Model):
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
-    content_object = GenericForeignKey('content_type', 'object_id')
+    content_object = GenericForeignKey("content_type", "object_id")
 
     def get_related_model(self):
         """Returns the model class for the related object."""
@@ -228,12 +263,8 @@ class GenericRelationMixin(models.Model):
 
 
 # ImageMixin with auto-resize and thumbnail generation
-from PIL import Image
-from io import BytesIO
-from django.core.files.uploadedfile import SimpleUploadedFile
-
 class ImageMixin(models.Model):
-    image = models.ImageField(upload_to='images/', null=True, blank=True)
+    image = models.ImageField(upload_to="images/", null=True, blank=True)
 
     def resize_image(self, width, height):
         """Resize the image to the given dimensions."""
@@ -241,9 +272,11 @@ class ImageMixin(models.Model):
             img = Image.open(self.image)
             img = img.resize((width, height), Image.ANTIALIAS)
             output = BytesIO()
-            img.save(output, format='JPEG')
+            img.save(output, format="JPEG")
             output.seek(0)
-            self.image = SimpleUploadedFile(self.image.name, output.read(), content_type='image/jpeg')
+            self.image = SimpleUploadedFile(
+                self.image.name, output.read(), content_type="image/jpeg"
+            )
             self.save()
 
     class Meta:
@@ -258,7 +291,9 @@ class SEOFieldsMixin(models.Model):
 
     def clean(self):
         if not self.seo_title:
-            self.seo_title = getattr(self, 'name', None) or getattr(self, 'title', 'Untitled')
+            self.seo_title = getattr(self, "name", None) or getattr(
+                self, "title", "Untitled"
+            )
         if not self.seo_description:
             self.seo_description = f"Learn more about {self.seo_title}."
         if len(self.seo_description) > 160:
@@ -270,7 +305,9 @@ class SEOFieldsMixin(models.Model):
 
 # ParentChildMixin with recursive retrieval and depth limit
 class ParentChildMixin(models.Model):
-    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
+    parent = models.ForeignKey(
+        "self", on_delete=models.CASCADE, null=True, blank=True, related_name="children"
+    )
 
     def get_all_children(self, max_depth=5, current_depth=0):
         """Recursively get all children of the current object, up to a max depth."""
@@ -278,7 +315,11 @@ class ParentChildMixin(models.Model):
             return []
         children = list(self.children.all())
         for child in self.children.all():
-            children.extend(child.get_all_children(max_depth=max_depth, current_depth=current_depth + 1))
+            children.extend(
+                child.get_all_children(
+                    max_depth=max_depth, current_depth=current_depth + 1
+                )
+            )
         return children
 
     class Meta:
@@ -322,8 +363,9 @@ class DynamicFieldsModelSerializer(serializers.ModelSerializer):
     A ModelSerializer that takes an additional `fields` argument that
     controls which fields should be displayed.
     """
+
     def __init__(self, *args, **kwargs):
-        fields = kwargs.pop('fields', None)
+        fields = kwargs.pop("fields", None)
         super().__init__(*args, **kwargs)
 
         if fields:
@@ -331,6 +373,3 @@ class DynamicFieldsModelSerializer(serializers.ModelSerializer):
             existing = set(self.fields)
             for field_name in existing - allowed:
                 self.fields.pop(field_name)
-
-
-
