@@ -7,7 +7,7 @@ from django.views.generic import (
     CreateView,
     UpdateView,
     DeleteView,
-    FormView
+    FormView,
 )
 from django.contrib import messages
 from django.utils.translation import gettext_lazy as _
@@ -15,7 +15,12 @@ from django.shortcuts import redirect, get_object_or_404
 from django_tables2 import SingleTableView, RequestConfig, SingleTableMixin
 from django.http import JsonResponse
 
-from ..mixins.views import FormMessagesMixin, BaseViewMixin
+from ..mixins.views import (
+    FormMessagesMixin,
+    BaseViewMixin,
+    AjaxFormMixin,
+    ActionContextMixin,
+)
 
 
 class BaseTemplateView(TemplateView):
@@ -231,7 +236,9 @@ class BaseTableListView(SingleTableView):
         return context
 
 
-class BaseCreateView(FormMessagesMixin, CreateView, BaseViewMixin):
+class BaseCreateView(
+    AjaxFormMixin, FormMessagesMixin, CreateView, BaseViewMixin, ActionContextMixin
+):
     """
     Base class for creating views that provides success and error messages. This class extends the
     CreateView and includes functionality for displaying messages upon successful or failed
@@ -246,8 +253,38 @@ class BaseCreateView(FormMessagesMixin, CreateView, BaseViewMixin):
     success_message = _("Successfully created.")
     error_message = _("There was an error creating the item.")
 
+    def form_valid(self, form):
+        """Handles successful form submission with a success message.
 
-class BaseUpdateView(FormMessagesMixin, UpdateView, BaseViewMixin):
+        Adds a success message to the request and calls the parent class's form_valid method.
+
+        Args:
+            form: The validated form instance.
+
+        Returns:
+            HttpResponse: The result of the parent class's form_valid method.
+        """
+
+        messages.success(self.request, self.success_message)
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        """Handles invalid form submission by displaying an error message.
+
+        Adds an error message to the request and calls the parent class's form_invalid method.
+
+        Args:
+            form: The invalid form instance.
+
+        Returns:
+            HttpResponse: The result of the parent class's form_invalid method.
+        """
+
+        messages.error(self.request, self.error_message)
+        return super().form_invalid(form)
+
+
+class BaseUpdateView(FormMessagesMixin, UpdateView, BaseViewMixin, ActionContextMixin):
     """
     Base class for updating views that provides success and error messages. This class extends the
     UpdateView and includes functionality for displaying messages upon successful or failed updates
@@ -263,7 +300,7 @@ class BaseUpdateView(FormMessagesMixin, UpdateView, BaseViewMixin):
     error_message = _("There was an error updating the item.")
 
 
-class BaseDeleteView(DeleteView, BaseViewMixin):
+class BaseDeleteView(DeleteView, BaseViewMixin, ActionContextMixin):
     """
     Base class for delete views that provides success and error messages upon deletion. This
     class extends the DeleteView and includes functionality to display messages based on the
@@ -314,7 +351,7 @@ class BaseDeleteView(DeleteView, BaseViewMixin):
             return redirect(self.get_success_url())
 
 
-class BaseManageView(TemplateView):
+class BaseManageView(TemplateView, ActionContextMixin):
     """
     Base class for managing views that display multiple tables with associated configurations. This
     class extends TemplateView to provide functionality for initializing tables based on a
@@ -427,8 +464,8 @@ class BaseManageView(TemplateView):
 
     def get_create_url(self, table):
         """
-        Retrieves the URL for creating new entries in the specified table. This method currently 
-        returns a placeholder URL, which can be overridden in subclasses to provide the actual 
+        Retrieves the URL for creating new entries in the specified table. This method currently
+        returns a placeholder URL, which can be overridden in subclasses to provide the actual
         creation URL for the table.
 
         Args:
@@ -442,22 +479,22 @@ class BaseManageView(TemplateView):
         return "#"
 
 
-class BaseIndexByFilterTableView(SingleTableMixin, ListView):
+class BaseIndexByFilterTableView(SingleTableMixin, ListView, ActionContextMixin):
     """
-    Base class for views that display a table filtered by a specified model object. This class 
-    extends SingleTableMixin and ListView to provide functionality for filtering data based on URL 
+    Base class for views that display a table filtered by a specified model object. This class
+    extends SingleTableMixin and ListView to provide functionality for filtering data based on URL
     parameters, allowing for dynamic table rendering based on the resolved filter object.
 
     Attributes:
         lookup_keys (list): An ordered list of keys used to resolve URL parameters for filtering.
         filter_field (str): The field in the model to filter by.
         filter_model (type): The model used to resolve the lookup value.
-        context_object_name_for_filter (str): The name of the context variable for the filter 
+        context_object_name_for_filter (str): The name of the context variable for the filter
             object.
         table_class (type): The table class used for rendering with django_tables2.
 
     Methods:
-        get_filter_value(): Retrieves the filter value from the URL parameters based on the 
+        get_filter_value(): Retrieves the filter value from the URL parameters based on the
             specified lookup keys.
         get_filter_object(filter_value): Resolves the filter object using the filter model and the
             filter value.
@@ -470,22 +507,23 @@ class BaseIndexByFilterTableView(SingleTableMixin, ListView):
         **kwargs: Additional keyword arguments to pass to the superclass methods.
 
     Returns:
-        dict: A dictionary containing the context data, including the filter object and filtered 
+        dict: A dictionary containing the context data, including the filter object and filtered
             queryset.
     """
-
 
     # Defaults: Override these in subclasses
     lookup_keys = ["slug"]  # Ordered list of lookup keys for URL kwargs
     filter_field = None  # Field to filter by in the model
     filter_model = None  # Model to resolve the lookup value
-    context_object_name_for_filter = None  # Name of the context variable for the filter object
+    context_object_name_for_filter = (
+        None  # Name of the context variable for the filter object
+    )
     table_class = None  # Table class for django_tables2 rendering
 
     def get_filter_value(self):
         """
-        Retrieves the filter value from the URL parameters based on the specified lookup keys. This 
-        method iterates through the defined lookup keys and returns the corresponding value from 
+        Retrieves the filter value from the URL parameters based on the specified lookup keys. This
+        method iterates through the defined lookup keys and returns the corresponding value from
         the URL kwargs, raising an error if no valid key is found.
 
         Args:
@@ -505,7 +543,7 @@ class BaseIndexByFilterTableView(SingleTableMixin, ListView):
 
     def get_filter_object(self, filter_value):
         """
-        Retrieves the filter object based on the provided filter value and the specified filter 
+        Retrieves the filter object based on the provided filter value and the specified filter
         model. This method checks if the filter model is defined, determines the appropriate lookup
         field based on the filter value, and returns the corresponding object or raises a 404 error
         if not found.
@@ -524,14 +562,14 @@ class BaseIndexByFilterTableView(SingleTableMixin, ListView):
 
         if not self.filter_model:
             raise ValueError("`filter_model` must be specified in the subclass.")
-        
+
         # Determine if the lookup is numeric (assume PK) or not
         lookup_field = "pk" if filter_value.isdigit() else "slug"
         return get_object_or_404(self.filter_model, **{lookup_field: filter_value})
 
     def get_queryset(self):
         """
-        Retrieves the queryset for the view, applying filtering based on the resolved filter 
+        Retrieves the queryset for the view, applying filtering based on the resolved filter
         object. This method checks if the filter field is specified, retrieves the filter value,
         and returns a filtered queryset based on the specified field and filter object.
 
@@ -554,9 +592,9 @@ class BaseIndexByFilterTableView(SingleTableMixin, ListView):
 
     def get_context_data(self, **kwargs):
         """
-        Retrieves and returns the context data for the template, including the resolved filter 
-        object. This method enhances the context by adding the filter object under a specified 
-        context variable name, allowing for better integration of filtering functionality in the 
+        Retrieves and returns the context data for the template, including the resolved filter
+        object. This method enhances the context by adding the filter object under a specified
+        context variable name, allowing for better integration of filtering functionality in the
         rendered view.
 
         Args:
@@ -564,7 +602,7 @@ class BaseIndexByFilterTableView(SingleTableMixin, ListView):
             **kwargs: Additional keyword arguments to pass to the superclass method.
 
         Returns:
-            dict: A dictionary containing the context data, including the filter object if 
+            dict: A dictionary containing the context data, including the filter object if
             applicable.
         """
 
@@ -580,7 +618,7 @@ class BaseIndexByFilterTableView(SingleTableMixin, ListView):
 
     def get_table_data(self):
         """
-        Retrieves the data for the table by obtaining the filtered queryset. This method serves as 
+        Retrieves the data for the table by obtaining the filtered queryset. This method serves as
         a bridge to access the queryset, allowing the table to be populated with the relevant data
         for display.
 
@@ -594,10 +632,10 @@ class BaseIndexByFilterTableView(SingleTableMixin, ListView):
         return self.get_queryset()
 
 
-class BaseFormView(FormView):
+class BaseFormView(FormView, ActionContextMixin):
     """
-    A base view for handling form submissions with custom success and error messages.  This view 
-    manages both valid and invalid form submissions, providing appropriate feedback and handling 
+    A base view for handling form submissions with custom success and error messages.  This view
+    manages both valid and invalid form submissions, providing appropriate feedback and handling
     AJAX requests.
 
     Attributes:
@@ -606,9 +644,9 @@ class BaseFormView(FormView):
         action (str): Action context for display purposes.
 
     Methods:
-        form_valid(form): Handles a valid form submission, adds a success message, and manages AJAX 
+        form_valid(form): Handles a valid form submission, adds a success message, and manages AJAX
             responses.
-        form_invalid(form): Handles an invalid form submission, adds an error message, and manages 
+        form_invalid(form): Handles an invalid form submission, adds an error message, and manages
             AJAX responses.
         get_context_data(**kwargs): Adds additional context to the template.
         get_success_url(): Determines the URL to redirect to after a successful form submission.
@@ -637,7 +675,9 @@ class BaseFormView(FormView):
 
         # Handle AJAX requests
         if self.request.is_ajax():
-            return JsonResponse({"success": True, "redirect_url": self.get_success_url()})
+            return JsonResponse(
+                {"success": True, "redirect_url": self.get_success_url()}
+            )
 
         return response
 
@@ -650,7 +690,7 @@ class BaseFormView(FormView):
             form (Form): The submitted form.
 
         Returns:
-            HttpResponse: A response object, which may be a redirect or a JSON response for AJAX 
+            HttpResponse: A response object, which may be a redirect or a JSON response for AJAX
                 requests.
         """
         response = super().form_invalid(form)

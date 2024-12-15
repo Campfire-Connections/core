@@ -1,11 +1,12 @@
 # core/forms/base.py
 
 from django import forms
-from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
+from core.mixins.forms import FormValidationMixin, FormContextMixin
 
-class BaseForm(forms.ModelForm):
+
+class BaseForm(forms.ModelForm, FormValidationMixin, FormContextMixin):
     """
     A base form class that extends ModelForm to include user context and custom validation.
     This form allows for additional logic based on the user and provides methods for applying
@@ -35,7 +36,9 @@ class BaseForm(forms.ModelForm):
         Returns:
             None
         """
+        self.user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
+        self.apply_default_widget_attrs()
 
     def apply_default_widget_attrs(self):
         """
@@ -54,52 +57,6 @@ class BaseForm(forms.ModelForm):
             field.widget.attrs.setdefault("class", "form-control")
             if field.required:
                 field.widget.attrs.setdefault("required", "required")
-
-    def clean(self):
-        """
-        Cleans the form data and allows for custom validation logic.
-        This method invokes the parent class's clean method and provides a place to implement
-        additional validation rules before returning the cleaned data.
-
-        Args:
-            self: The form instance being cleaned.
-
-        Returns:
-            dict: The cleaned data from the form.
-
-        Raises:
-            ValidationError: If any custom validation fails during the cleaning process.
-        """
-
-        cleaned_data = super().clean()
-        if "name" in cleaned_data and len(cleaned_data["name"]) < 3:
-            self.add_error("name", _("Name must be at least 3 characters long."))
-        return cleaned_data
-
-    def validate_field_combinations(self, field1, field2):
-        """
-        Validates that the value of one field is not greater than another field.
-        This method checks the cleaned data for the specified fields and raises a validation error
-        if the condition is violated.
-
-        Args:
-            field1 (str): The name of the first field to compare.
-            field2 (str): The name of the second field to compare.
-
-        Returns:
-            None
-
-        Raises:
-            ValidationError: If the value of field1 is greater than the value of field2.
-        """
-
-        value1 = self.cleaned_data.get(field1)
-        value2 = self.cleaned_data.get(field2)
-        if value1 and value2 and value1 > value2:
-            raise ValidationError(
-                _(f"{field1} cannot be greater than {field2}."),
-                code="invalid_combination",
-            )
 
     def save(self, commit=True):
         """

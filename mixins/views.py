@@ -1,15 +1,16 @@
 # core/mixins/views.py
 
 from django.contrib.auth.mixins import (
-    PermissionRequiredMixin,
+    PermissionRequiredMixin as BasePermissionRequiredMixin,
     UserPassesTestMixin,
     LoginRequiredMixin as BaseLoginRequiredMixin,
 )
 from django.contrib import messages
 from django.shortcuts import redirect
-from django.urls import reverse_lazy, reverse, NoReverseMatch
+from django.urls import reverse, NoReverseMatch
 from django.http import JsonResponse
 from django.core.exceptions import PermissionDenied, ImproperlyConfigured
+from django.utils.translation import gettext_lazy as _
 
 
 class LoginRequiredMixin(BaseLoginRequiredMixin):
@@ -304,3 +305,13 @@ class BaseViewMixin:
                 f"{self.__class__.__name__} cannot determine success URL parameters. "
                 "Define `success_url_params` or override `get_success_url_params`."
             )
+
+
+class ActionContextMixin:
+    action = None
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.action:
+            context["action"] = self.action
+        return context
