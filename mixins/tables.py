@@ -54,25 +54,19 @@ class ActionUrlMixin:
             NoReverseMatch: If the URL cannot be reversed due to an invalid name or parameters.
         """
 
-        custom_url_info = getattr(self, "urls", {}).get(action, {})
-        default_url_info = self.default_urls.get(action, {})
-        action_url_info = {**default_url_info, **custom_url_info}
-        url_name = action_url_info.get("name")
-
-        if url_name is None:
-            # If no URL name, log a warning and return None or a default link
-            logger.warning(f"URL name for action '{action}' is None.")
-            return "#"
-
+        action_url_info = self.urls.get(action, {})
+        url_name = action_url_info.get("name", f"{self.url_namespace}:{action}")
         kwargs_config = action_url_info.get("kwargs", {})
+
         url_kwargs = self.build_url_kwargs(kwargs_config, record, context)
 
         try:
             return reverse(url_name, kwargs=url_kwargs)
         except NoReverseMatch:
-            logger.error(
-                f"Failed to reverse URL for action '{action}' with name '{url_name}' and kwargs {url_kwargs}"
-            )
+            if self.debug_mode:
+                logger.warning(
+                    f"URL reverse failed for action '{action}' with kwargs {url_kwargs}"
+                )
             return "#"
 
     def build_url_kwargs(self, kwargs_config, record=None, context=None):
@@ -94,13 +88,9 @@ class ActionUrlMixin:
 
         url_kwargs = {}
         for key, attr_path in kwargs_config.items():
-            if context and key in context:
-                url_kwargs[key] = context[key]
-            elif record:
-                value = self.get_nested_attr(record, attr_path)
-                url_kwargs[key] = value or getattr(record, "pk", None)
-            else:
-                url_kwargs[key] = attr_path
+            url_kwargs[key] = (
+                self.get_nested_attr(record, attr_path) if record else context.get(key)
+            )
         return url_kwargs
 
     def get_nested_attr(self, obj, attr_path):
@@ -119,11 +109,12 @@ class ActionUrlMixin:
             The value of the nested attribute, or None if any attribute in the path does not exist.
         """
 
-        for attr in attr_path.split("__"):
-            obj = getattr(obj, attr, None)
-            if obj is None:
-                return None
-        return obj
+        try:
+            for attr in attr_path.split("__"):
+                obj = getattr(obj, attr)
+            return obj
+        except AttributeError:
+            return None
 
     def generate_default_urls(self):
         """
@@ -166,6 +157,7 @@ class ActionsColumnMixin(ActionUrlMixin, tables.Table):
         "manage": "list-check",
     }
     action_title_map = {
+        "add": "Add",
         "show": "View",
         "edit": "Edit",
         "delete": "Delete",
@@ -184,26 +176,14 @@ class ActionsColumnMixin(ActionUrlMixin, tables.Table):
         Get a list of actions for a given record, including custom ones defined in the table.
         """
         actions = []
-        # Combine default and custom actions
-        all_actions = list(
-            dict.fromkeys(list(self.urls.keys()) + self.available_actions)
-        )
-        for action in all_actions:
-            if action == "add" and not include_add:
-                continue
-            if self.is_allowed_action(user, action, record):
-                action_info = self.urls.get(action, {})
-                actions.append(
-                    {
-                        "url": self.get_url(action, record),
-                        "icon": action_info.get(
-                            "icon", self.get_icon_for_action(action)
-                        ),
-                        "title": action_info.get(
-                            "title", self.get_title_for_action(action)
-                        ),
-                    }
-                )
+        for action in self.available_actions:
+            url = self.get_url(action, record=record)
+            if url:
+                actions.append({
+                    "url": url,
+                    "icon": self.get_icon_for_action(action),
+                    "title": self.get_title_for_action(action),
+                })
         return actions
 
     def is_allowed_action(self, user, action, record):
@@ -237,9 +217,16 @@ class ActionsColumnMixin(ActionUrlMixin, tables.Table):
         )
 
     def add_actions_column(self):
-        self.base_columns["actions"] = tables.Column(
-            verbose_name="Actions", orderable=False, accessor="pk", empty_values=()
-        )
+        """
+        Dynamically add an 'actions' column to the table.
+        """
+        if "actions" not in self.base_columns:
+            self.base_columns["actions"] = tables.TemplateColumn(
+                template_name="partials/tables/actions_column.html",
+                verbose_name="Actions",
+                orderable=False,
+                accessor="pk",
+            )
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)

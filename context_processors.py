@@ -2,10 +2,14 @@
 
 import logging
 
-from django.contrib.auth.models import User
 
+from django.core.cache import cache
+
+from core.utils import get_info_row_data
 from enrollment.models.enrollment import ActiveEnrollment
 from faction.models.faction import Faction
+from user.models import User
+
 from .menus import (
     FACULTY_ADMIN_MENU,
     ATTENDEE_MENU,
@@ -37,7 +41,6 @@ def build_dynamic_url(item, user):
     return item
 
 
-
 def dynamic_menu(request):
     menu = []
     if request.user.is_authenticated:
@@ -58,8 +61,8 @@ def dynamic_menu(request):
 
         context = {"user": user}
         # Add any additional context needed for dynamic params
-        if hasattr(user, 'facultyprofile'):
-            context['faculty_slug'] = user.facultyprofile.facility.slug
+        if hasattr(user, "facultyprofile"):
+            context["faculty_slug"] = user.facultyprofile.facility.slug
 
         for item in menu:
             item = build_dynamic_url(item, user)
@@ -71,7 +74,6 @@ def dynamic_menu(request):
         logger.debug(f"menu: {menu}")
 
     return {"menu_items": menu}
-
 
 
 def top_links_menu(request):
@@ -146,3 +148,12 @@ def color_scheme_processor(request):
     }
 
     return {"color_scheme": colors}
+
+
+def user_info_row(request):
+    """
+    Adds the user's info row data to the template context for authenticated users.
+    """
+    if request.user.is_authenticated:
+        return {"info_row_data": get_info_row_data(request.user)}
+    return {}
