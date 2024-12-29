@@ -39,7 +39,7 @@ FACULTY_ADMIN_MENU = [
             },
         ],
     },
-    {"name": "Reports", "url_name": "home", "icon": "fa-file"},
+    {"name": "Reports", "url_name": "reports:list_user_reports", "icon": "fa-file"},
 ]
 
 # Menu for Attendees

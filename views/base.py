@@ -1,5 +1,7 @@
 # core/views/base.py
 
+import json
+
 from django.views.generic import (
     TemplateView,
     DetailView,
@@ -734,3 +736,45 @@ class BaseFormView(FormView, ActionContextMixin):
         if hasattr(self, "success_url") and self.success_url:
             return self.success_url
         raise NotImplementedError("No success_url specified for BaseFormView.")
+
+
+class BaseDashboardView(BaseManageView):
+    """
+    BaseDashboardView: A view for displaying dashboard-like pages with draggable widget tables.
+    Extends the BaseManageView to support dynamic widget layouts.
+    """
+
+    template_name = "dashboard/dashboard.html"
+    widgets_config = None  # To be overridden by subclasses
+
+    def get_widgets_config(self):
+        """
+        Returns the widget configuration for the dashboard.
+        Widgets are defined as a dictionary where the key is the widget name, and the value includes:
+            - 'table_class': The table class to use for the widget
+            - 'queryset': The queryset to feed into the table
+            - 'title': Title of the widget (optional)
+        """
+        if not self.widgets_config:
+            raise NotImplementedError(
+                "Widgets configuration must be provided in subclasses."
+            )
+        return self.widgets_config
+
+    def get_context_data(self, **kwargs):
+        """
+        Prepare the context data for rendering the dashboard, including the widgets and their data.
+        """
+        context = super().get_context_data(**kwargs)
+        widgets = []
+        for widget_name, config in self.get_widgets_config().items():
+            table = config["table_class"](config["queryset"], request=self.request)
+            widgets.append(
+                {
+                    "name": widget_name,
+                    "title": config.get("title", widget_name.replace("_", " ").title()),
+                    "table": table,
+                }
+            )
+        context["widgets"] = widgets
+        return context
