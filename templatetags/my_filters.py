@@ -29,18 +29,20 @@ def pluralize_custom(value, word):
     return p.plural(word) if value != 1 else word
 
 
-@register.simple_tag(name="pluralize_word")
-def pluralize_word(word, apply_title=False):
-    """
-    Pluralize the given word without any value, and optionally apply the title filter.
-    Usage: {% pluralize_word "item" %} or {% pluralize_word "item" True %}
-    Example: {% pluralize_word "item" %} -> "items"
-             {% pluralize_word "item" True %} -> "Items"
-    """
-    plural_word = p.plural(word)
-    if apply_title:
-        plural_word = title(plural_word)
-    return plural_word
+@register.filter
+def pluralize_word(word, capitalize=False):
+    if not isinstance(word, str):
+        raise ValueError("Input to pluralize_word must be a string.")
+
+    try:
+        plural_word = p.plural(word)
+        if capitalize:
+            plural_word = plural_word.capitalize()
+        return plural_word
+    except Exception as e:
+        # Log the exception for debugging
+        print(f"Error in pluralize_word: {e}")
+        return word  # Fallback to the original word if an error occurs
 
 
 @register.filter(name="singlize_custom")
@@ -61,6 +63,6 @@ def int_filter(value):
         return 0
 
 
-@register.filter(name='spacify')
+@register.filter(name="spacify")
 def spacify(value):
-    return value.replace('_', ' ')
+    return value.replace("_", " ")

@@ -740,8 +740,8 @@ class BaseFormView(FormView, ActionContextMixin):
 
 class BaseDashboardView(BaseManageView):
     """
-    BaseDashboardView: A view for displaying dashboard-like pages with draggable widget tables.
-    Extends the BaseManageView to support dynamic widget layouts.
+    BaseDashboardView: A view for displaying dashboard-like pages with dynamic widgets.
+    Supports widgets as tables, charts, or text.
     """
 
     template_name = "dashboard/dashboard.html"
@@ -751,8 +751,10 @@ class BaseDashboardView(BaseManageView):
         """
         Returns the widget configuration for the dashboard.
         Widgets are defined as a dictionary where the key is the widget name, and the value includes:
-            - 'table_class': The table class to use for the widget
-            - 'queryset': The queryset to feed into the table
+            - 'table_class': The table class to use for the widget (optional)
+            - 'chart_class': The chart class to use for the widget (optional)
+            - 'queryset': The queryset to feed into the widget (optional)
+            - 'data_source': Data for charts or text-based widgets (optional)
             - 'title': Title of the widget (optional)
         """
         if not self.widgets_config:
@@ -763,18 +765,38 @@ class BaseDashboardView(BaseManageView):
 
     def get_context_data(self, **kwargs):
         """
-        Prepare the context data for rendering the dashboard, including the widgets and their data.
+        Prepare the context data for rendering the dashboard, including widgets and their data.
         """
         context = super().get_context_data(**kwargs)
         widgets = []
+
         for widget_name, config in self.get_widgets_config().items():
-            table = config["table_class"](config["queryset"], request=self.request)
-            widgets.append(
-                {
-                    "name": widget_name,
-                    "title": config.get("title", widget_name.replace("_", " ").title()),
-                    "table": table,
-                }
-            )
+            widget = {
+                "name": widget_name,
+                "title": config.get("title", widget_name.replace("_", " ").title()),
+                "type": None,  # Type of the widget: 'table', 'chart', or 'text'
+                "content": None,  # The widget content, e.g., table, chart, or text
+            }
+
+            # Table widget
+            if "table_class" in config and config["table_class"]:
+                table = config["table_class"](config["queryset"], request=self.request)
+                widget["type"] = "table"
+                widget["content"] = table
+
+            # Chart widget
+            elif "chart_class" in config and config["chart_class"]:
+                chart = config["chart_class"](config["data_source"])
+                widget["type"] = "chart"
+                widget["content"] = chart.render()
+
+            # Text widget
+            elif "data_source" in config:
+                widget["type"] = "text"
+                widget["content"] = config["data_source"]
+
+            widgets.append(widget)
+
         context["widgets"] = widgets
         return context
+

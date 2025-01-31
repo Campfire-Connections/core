@@ -128,8 +128,7 @@ class AjaxFormMixin:
             JsonResponse: A JSON response indicating success and the redirect URL for AJAX
                 requests, or the default response for non-AJAX requests.
         """
-
-        if self.request.is_ajax():
+        if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
             return JsonResponse(
                 {"success": True, "redirect_url": self.get_success_url()}
             )
@@ -149,8 +148,7 @@ class AjaxFormMixin:
             JsonResponse: A JSON response indicating failure and containing the form errors for
                 AJAX requests, or the default response for non-AJAX requests.
         """
-
-        if self.request.is_ajax():
+        if self.request.headers.get("x-requested-with") == "XMLHttpRequest":
             return JsonResponse({"success": False, "errors": form.errors}, status=400)
         return super().form_invalid(form)
 

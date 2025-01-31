@@ -4,7 +4,10 @@ import logging
 
 
 from django.core.cache import cache
+from django.db.models import Q
 
+from enrollment.models.facility import FacilityEnrollment
+from enrollment.models.faction import FactionEnrollment
 from core.utils import get_info_row_data
 from enrollment.models.enrollment import ActiveEnrollment
 from faction.models.faction import Faction
@@ -157,3 +160,82 @@ def user_info_row(request):
     if request.user.is_authenticated:
         return {"info_row_data": get_info_row_data(request.user)}
     return {}
+
+
+
+def my_enrollments(request):
+    if not request.user.is_authenticated:
+        return {}
+
+    user = request.user
+    profile = user_profile(request)
+    
+    enrollments = {
+        "facility_enrollments": [],
+        "faction_enrollments": [],
+        "can_enroll_self": False,
+        "can_enroll_faction": False,
+    }
+
+    # Attendee: Fetch personal enrollments
+    if user.user_type == "ATTENDEE":
+        attendee_profile = getattr(user, "attendeeprofile_profile", None)
+
+        if attendee_profile:
+            # Fetch the faction associated with the attendee
+            faction = attendee_profile.faction
+
+            # Facility enrollments via faction -> faction enrollments -> facility enrollments
+            if faction:
+                enrollments["facility_enrollments"] = FacilityEnrollment.objects.filter(
+                    id__in=faction.enrollments.values_list("facility_enrollment_id", flat=True)
+                )
+
+                enrollments["faction_enrollments"] = FactionEnrollment.objects.filter(
+                    faction=faction
+                )
+            else:
+                # If no faction, set empty QuerySets
+                enrollments["facility_enrollments"] = FacilityEnrollment.objects.none()
+                enrollments["faction_enrollments"] = FactionEnrollment.objects.none()
+
+            # Can enroll self
+            enrollments["can_enroll_self"] = True
+        else:
+            # Handle cases where the attendee has no profile
+            enrollments["facility_enrollments"] = FacilityEnrollment.objects.none()
+            enrollments["faction_enrollments"] = FactionEnrollment.objects.none()
+            enrollments["can_enroll_self"] = False
+
+    # Leader Admin: Fetch faction enrollments
+    elif user.user_type == "LEADER" and user.is_admin:
+
+        leader_profile = getattr(user, "leaderprofile_profile", None)
+
+        if leader_profile:
+            # Fetch the faction associated with the leader
+            faction = leader_profile.faction
+
+            # Facility enrollments via faction -> faction enrollments -> facility enrollments
+            if faction:
+                enrollments["facility_enrollments"] = FacilityEnrollment.objects.filter(
+                    id__in=faction.enrollments.values_list("facility_enrollment_id", flat=True)
+                )
+
+                enrollments["faction_enrollments"] = FactionEnrollment.objects.filter(
+                    faction=faction
+                )
+            else:
+                # If no faction, set empty QuerySets
+                enrollments["facility_enrollments"] = FacilityEnrollment.objects.none()
+                enrollments["faction_enrollments"] = FactionEnrollment.objects.none()
+
+            # Can enroll self
+            enrollments["can_enroll_self"] = True
+        else:
+            # Handle cases where the leader has no profile
+            enrollments["facility_enrollments"] = FacilityEnrollment.objects.none()
+            enrollments["faction_enrollments"] = FactionEnrollment.objects.none()
+            enrollments["can_enroll_self"] = False
+
+    return {"my_enrollments": enrollments}
