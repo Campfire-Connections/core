@@ -14,6 +14,7 @@ from django.utils.text import slugify
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
+from address.models import AddressField
 
 
 # Enhanced NameDescriptionMixin with validation and better UX
@@ -196,6 +197,19 @@ class ActiveMixin(models.Model):
     def deactivate(self):
         self.is_active = False
         self.save()
+
+    class Meta:
+        abstract = True
+
+
+class AddressableMixin(models.Model):
+    """Provide a standard address field for domain models."""
+
+    address = AddressField(
+        blank=True,
+        null=True,
+        related_name="%(app_label)s_%(class)s_address",
+    )
 
     class Meta:
         abstract = True

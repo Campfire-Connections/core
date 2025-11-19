@@ -205,6 +205,7 @@ from django.shortcuts import get_object_or_404
 from organization.models import Organization
 from facility.models import Facility
 from faction.models import Faction
+from core.portals import get_portal_config
 
 
 class OrgScopedMixin:
@@ -252,7 +253,12 @@ class FactionScopedMixin:
         if faction_slug:
             return get_object_or_404(Faction, slug=faction_slug)
         profile = getattr(self.request.user, "leaderprofile_profile", None)
-        return getattr(profile, "faction", None)
+        if profile and profile.faction_id:
+            return profile.faction
+        attendee_profile = getattr(self.request.user, "attendeeprofile_profile", None)
+        if attendee_profile and attendee_profile.faction_id:
+            return attendee_profile.faction
+        return None
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -264,13 +270,23 @@ class PortalPermissionMixin(UserPassesTestMixin):
     """Base permission mixin keyed on user_type for portal separation."""
 
     allowed_user_types = ()
+    portal_key = None
+
+    def get_allowed_user_types(self):
+        if self.allowed_user_types:
+            return self.allowed_user_types
+        if self.portal_key:
+            config = get_portal_config(self.portal_key)
+            return tuple(config.get("allowed_user_types", ()))
+        return ()
 
     def test_func(self):
         if not self.request.user.is_authenticated:
             return False
-        if not self.allowed_user_types:
+        allowed = self.get_allowed_user_types()
+        if not allowed:
             return True
-        return self.request.user.user_type in self.allowed_user_types
+        return self.request.user.user_type in allowed
 
 
 class ObjectPermissionRequiredMixin(PermissionRequiredMixin):

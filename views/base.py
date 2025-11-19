@@ -23,6 +23,7 @@ from ..mixins.views import (
     AjaxFormMixin,
     ActionContextMixin,
 )
+from core.portals import get_portal_config
 
 
 class BaseTemplateView(TemplateView):
@@ -745,7 +746,17 @@ class BaseDashboardView(BaseManageView):
     """
 
     template_name = "dashboard/dashboard.html"
+    portal_key = None
     widgets_config = None  # To be overridden by subclasses
+
+    def get_portal_config(self):
+        return get_portal_config(self.portal_key or "")
+
+    def get_template_names(self):
+        portal_template = self.get_portal_config().get("dashboard_template")
+        if portal_template:
+            return [portal_template]
+        return [self.template_name]
 
     def get_widgets_config(self):
         """
@@ -758,9 +769,11 @@ class BaseDashboardView(BaseManageView):
             - 'title': Title of the widget (optional)
         """
         if not self.widgets_config:
-            raise NotImplementedError(
-                "Widgets configuration must be provided in subclasses."
-            )
+            portal_widgets = self.get_portal_config().get("widgets", [])
+            return {
+                widget_name: {"data_source": ""}
+                for widget_name in portal_widgets
+            }
         return self.widgets_config
 
     def get_context_data(self, **kwargs):
@@ -799,4 +812,3 @@ class BaseDashboardView(BaseManageView):
 
         context["widgets"] = widgets
         return context
-
