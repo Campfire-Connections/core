@@ -373,3 +373,22 @@ class DynamicFieldsModelSerializer(serializers.ModelSerializer):
             existing = set(self.fields)
             for field_name in existing - allowed:
                 self.fields.pop(field_name)
+
+
+class HierarchicalEntity(
+    NameDescriptionMixin,
+    TimestampMixin,
+    SoftDeleteMixin,
+    AuditMixin,
+    SlugMixin,
+    ActiveMixin,
+    ImageMixin,
+    ParentChildMixin,
+):
+    """
+    Abstract base for tree-structured domain objects (Organization/Facility/Faction).
+    Consolidates common behaviors (naming, slug, active, image, parent/child, audit/timestamps).
+    """
+
+    class Meta:
+        abstract = True

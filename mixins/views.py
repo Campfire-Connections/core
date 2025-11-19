@@ -200,6 +200,79 @@ class PermissionRequiredMixin:
         return super().dispatch(request, *args, **kwargs)
 
 
+# Portal scoping/perms -------------------------------------------------------
+from django.shortcuts import get_object_or_404
+from organization.models import Organization
+from facility.models import Facility
+from faction.models import Faction
+
+
+class OrgScopedMixin:
+    """Resolve and scope queryset to an organization via URL kwarg or request context."""
+
+    org_kwarg = "organization_slug"
+
+    def get_scope_org(self):
+        org_slug = self.kwargs.get(self.org_kwarg)
+        if org_slug:
+            return get_object_or_404(Organization, slug=org_slug)
+        return getattr(self.request.user, "organization", None)
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        org = self.get_scope_org()
+        return qs.filter(organization=org) if org and hasattr(qs.model, "organization") else qs
+
+
+class FacilityScopedMixin:
+    """Resolve and scope queryset to a facility via URL kwarg or request context."""
+
+    facility_kwarg = "facility_slug"
+
+    def get_scope_facility(self):
+        fac_slug = self.kwargs.get(self.facility_kwarg)
+        if fac_slug:
+            return get_object_or_404(Facility, slug=fac_slug)
+        profile = getattr(self.request.user, "facultyprofile_profile", None)
+        return getattr(profile, "facility", None)
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        fac = self.get_scope_facility()
+        return qs.filter(facility=fac) if fac and hasattr(qs.model, "facility") else qs
+
+
+class FactionScopedMixin:
+    """Resolve and scope queryset to a faction via URL kwarg or request context."""
+
+    faction_kwarg = "faction_slug"
+
+    def get_scope_faction(self):
+        faction_slug = self.kwargs.get(self.faction_kwarg)
+        if faction_slug:
+            return get_object_or_404(Faction, slug=faction_slug)
+        profile = getattr(self.request.user, "leaderprofile_profile", None)
+        return getattr(profile, "faction", None)
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        faction = self.get_scope_faction()
+        return qs.filter(faction=faction) if faction and hasattr(qs.model, "faction") else qs
+
+
+class PortalPermissionMixin(UserPassesTestMixin):
+    """Base permission mixin keyed on user_type for portal separation."""
+
+    allowed_user_types = ()
+
+    def test_func(self):
+        if not self.request.user.is_authenticated:
+            return False
+        if not self.allowed_user_types:
+            return True
+        return self.request.user.user_type in self.allowed_user_types
+
+
 class ObjectPermissionRequiredMixin(PermissionRequiredMixin):
     def has_permission(self):
         obj = self.get_object()
