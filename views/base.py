@@ -17,6 +17,8 @@ from django.shortcuts import redirect, get_object_or_404
 from django_tables2 import SingleTableView, RequestConfig, SingleTableMixin
 from django.http import JsonResponse
 
+from django.utils.module_loading import import_string
+
 from ..mixins.views import (
     FormMessagesMixin,
     BaseViewMixin,
@@ -24,6 +26,7 @@ from ..mixins.views import (
     ActionContextMixin,
 )
 from core.portals import get_portal_config
+from core.widgets import DashboardWidget
 
 
 class BaseTemplateView(TemplateView):
@@ -747,7 +750,7 @@ class BaseDashboardView(BaseManageView):
 
     template_name = "dashboard/dashboard.html"
     portal_key = None
-    widgets_config = None  # To be overridden by subclasses
+    widget_definitions = None
 
     def get_portal_config(self):
         return get_portal_config(self.portal_key or "")
@@ -758,57 +761,47 @@ class BaseDashboardView(BaseManageView):
             return [portal_template]
         return [self.template_name]
 
-    def get_widgets_config(self):
+    def get_dashboard_widgets(self):
         """
-        Returns the widget configuration for the dashboard.
-        Widgets are defined as a dictionary where the key is the widget name, and the value includes:
-            - 'table_class': The table class to use for the widget (optional)
-            - 'chart_class': The chart class to use for the widget (optional)
-            - 'queryset': The queryset to feed into the widget (optional)
-            - 'data_source': Data for charts or text-based widgets (optional)
-            - 'title': Title of the widget (optional)
+        Return a list of DashboardWidget instances (or widget definitions that can
+        be converted into instances). Subclasses should override this to provide
+        context-aware cards. When nothing is returned the template will show an
+        empty state instead of crashing.
         """
-        if not self.widgets_config:
-            portal_widgets = self.get_portal_config().get("widgets", [])
-            return {
-                widget_name: {"data_source": ""}
-                for widget_name in portal_widgets
-            }
-        return self.widgets_config
+        if isinstance(self.widget_definitions, (list, tuple)):
+            return list(self.widget_definitions)
+        return []
+
+    def _resolve_widget(self, definition):
+        if isinstance(definition, DashboardWidget):
+            return definition
+
+        if isinstance(definition, dict):
+            widget_class = definition.get("widget") or definition.get("class")
+            if isinstance(widget_class, str):
+                widget_class = import_string(widget_class)
+            if not widget_class:
+                return None
+            options = definition.get("options", {})
+            title = definition.get("title", widget_class.__name__)
+            return widget_class(self.request, title=title, **options)
+
+        return None
+
+    def build_widgets(self):
+        widgets = []
+        for definition in self.get_dashboard_widgets():
+            widget = self._resolve_widget(definition)
+            if widget is None:
+                continue
+            widgets.append(widget.as_dict())
+        widgets.sort(key=lambda widget: widget.get("priority", 10))
+        return widgets
 
     def get_context_data(self, **kwargs):
         """
         Prepare the context data for rendering the dashboard, including widgets and their data.
         """
         context = super().get_context_data(**kwargs)
-        widgets = []
-
-        for widget_name, config in self.get_widgets_config().items():
-            widget = {
-                "name": widget_name,
-                "title": config.get("title", widget_name.replace("_", " ").title()),
-                "type": None,  # Type of the widget: 'table', 'chart', or 'text'
-                "content": None,  # The widget content, e.g., table, chart, or text
-            }
-
-            # Table widget
-            if "table_class" in config and config["table_class"]:
-                table = config["table_class"](config["queryset"], request=self.request)
-                widget["type"] = "table"
-                widget["content"] = table
-
-            # Chart widget
-            elif "chart_class" in config and config["chart_class"]:
-                chart = config["chart_class"](config["data_source"])
-                widget["type"] = "chart"
-                widget["content"] = chart.render()
-
-            # Text widget
-            elif "data_source" in config:
-                widget["type"] = "text"
-                widget["content"] = config["data_source"]
-
-            widgets.append(widget)
-
-        context["widgets"] = widgets
+        context["widgets"] = self.build_widgets()
         return context
