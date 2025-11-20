@@ -867,4 +867,5 @@ class BaseDashboardView(BaseManageView):
         """
         context = super().get_context_data(**kwargs)
         context["widgets"] = self.build_widgets()
+        context["dashboard_portal_key"] = self.portal_key or "default"
         return context
