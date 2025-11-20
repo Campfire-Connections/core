@@ -779,6 +779,17 @@ class BaseDashboardView(BaseManageView):
         )
         return prefs
 
+    def get_hidden_widget_metadata(self, preferences):
+        if not preferences or not preferences.hidden_widgets:
+            return []
+        definitions = {d.get("key"): d for d in self.get_registry_definitions()}
+        metadata = []
+        for widget_key in preferences.hidden_widgets:
+            definition = definitions.get(widget_key) or {}
+            title = definition.get("title") or widget_key.replace("_", " ").title()
+            metadata.append({"key": widget_key, "title": title})
+        return metadata
+
     def get_registry_definitions(self):
         if isinstance(self.widget_definitions, (list, tuple)):
             return self.widget_definitions
@@ -866,6 +877,8 @@ class BaseDashboardView(BaseManageView):
         Prepare the context data for rendering the dashboard, including widgets and their data.
         """
         context = super().get_context_data(**kwargs)
+        preferences = self.get_dashboard_preferences()
         context["widgets"] = self.build_widgets()
         context["dashboard_portal_key"] = self.portal_key or "default"
+        context["hidden_widgets"] = self.get_hidden_widget_metadata(preferences)
         return context
