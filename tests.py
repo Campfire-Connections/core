@@ -12,6 +12,9 @@ from course.models.requirement import Requirement
 from enrollment.models.organization import OrganizationEnrollment, OrganizationCourse
 from enrollment.models.facility import FacilityEnrollment
 from core.context_processors import user_profile as user_profile_context
+from core.views.base import BaseDashboardView
+from core.widgets import TextWidget
+from core.models.dashboard import DashboardLayout
 User = get_user_model()
 
 
@@ -97,3 +100,53 @@ class UserProfileContextProcessorTests(TestCase):
 
         self.assertEqual(profile.slug, "")
         self.assertTrue(hasattr(profile, "organization"))
+
+
+class DummyDashboardView(BaseDashboardView):
+    template_name = "leader/dashboard.html"
+    portal_key = "test-dashboard"
+
+    def get_registry_definitions(self):
+        return [
+            {
+                "key": "visible",
+                "widget": TextWidget,
+                "title": "Visible",
+                "options": {"content": "hello"},
+            },
+            {
+                "key": "hidden",
+                "widget": TextWidget,
+                "title": "Hidden",
+                "options": {"content": "secret"},
+            },
+        ]
+
+
+class DashboardRegistryTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.user = User.objects.create_user(
+            username="dashboard.user",
+            password="pass1234",
+            user_type=User.UserType.ADMIN,
+        )
+
+    def _build_view(self):
+        view = DummyDashboardView()
+        request = self.factory.get("/")
+        request.user = self.user
+        view.request = request
+        view.args = []
+        view.kwargs = {}
+        return view
+
+    def test_hidden_preferences_filter_widgets(self):
+        DashboardLayout.objects.create(
+            user=self.user, portal_key="test-dashboard", hidden_widgets=["hidden"]
+        )
+        view = self._build_view()
+        widgets = view.build_widgets()
+        keys = [widget["key"] for widget in widgets]
+        self.assertIn("visible", keys)
+        self.assertNotIn("hidden", keys)

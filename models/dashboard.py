@@ -5,15 +5,22 @@ from django.db import models
 
 User = get_user_model()
 
+
 class DashboardLayout(models.Model):
     """
-    Represents the layout configuration for a user's dashboard.
-    
-    Args:
-        user: The user associated with the dashboard layout.
-        layout: The configuration of the dashboard layout.
+    Stores per-user dashboard preferences (layout JSON + hidden widget keys) scoped to a portal key.
     """
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    layout = models.TextField()
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="dashboard_layouts"
+    )
+    portal_key = models.CharField(max_length=64, default="default")
+    layout = models.TextField(blank=True)
+    hidden_widgets = models.JSONField(default=list, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("user", "portal_key")
+
     def __str__(self):
-        return f'{self.user.username} Dashboard Layout'
+        return f"{self.user.username} - {self.portal_key} Dashboard Layout"

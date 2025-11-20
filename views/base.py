@@ -27,6 +27,8 @@ from ..mixins.views import (
 )
 from core.portals import get_portal_config
 from core.widgets import DashboardWidget
+from core.dashboard_registry import DASHBOARD_REGISTRY
+from core.models.dashboard import DashboardLayout
 
 
 class BaseTemplateView(TemplateView):
@@ -762,18 +764,53 @@ class BaseDashboardView(BaseManageView):
         return [self.template_name]
 
     def get_dashboard_widgets(self):
-        """
-        Return a list of DashboardWidget instances (or widget definitions that can
-        be converted into instances). Subclasses should override this to provide
-        context-aware cards. When nothing is returned the template will show an
-        empty state instead of crashing.
-        """
-        if isinstance(self.widget_definitions, (list, tuple)):
-            return list(self.widget_definitions)
+        """Return the widgets for this dashboard (registry-driven by default)."""
+        return self.get_registry_widgets()
+
+    def get_extra_widgets(self):
+        """Hook for subclasses to append widgets beyond the registry defaults."""
         return []
 
-    def _resolve_widget(self, definition):
+    def get_dashboard_preferences(self):
+        if not self.portal_key or not self.request.user.is_authenticated:
+            return None
+        prefs, _ = DashboardLayout.objects.get_or_create(
+            user=self.request.user, portal_key=self.portal_key
+        )
+        return prefs
+
+    def get_registry_definitions(self):
+        if isinstance(self.widget_definitions, (list, tuple)):
+            return self.widget_definitions
+        return DASHBOARD_REGISTRY.get(self.portal_key or "", [])
+
+    def get_registry_widgets(self):
+        definitions = self.get_registry_definitions()
+        preferences = self.get_dashboard_preferences()
+        hidden = set(preferences.hidden_widgets) if preferences else set()
+
+        widgets = []
+        for definition in definitions:
+            key = definition.get("key")
+            if key and key in hidden:
+                continue
+            widget = self._resolve_definition(definition)
+            if widget:
+                widgets.append(widget)
+
+        extra = self.get_extra_widgets()
+        for definition in extra:
+            widget = self._resolve_definition(definition)
+            if widget:
+                widgets.append(widget)
+
+        return widgets
+
+    def _resolve_definition(self, definition):
         if isinstance(definition, DashboardWidget):
+            return definition.as_dict()
+
+        if isinstance(definition, dict) and "type" in definition:
             return definition
 
         if isinstance(definition, dict):
@@ -782,19 +819,45 @@ class BaseDashboardView(BaseManageView):
                 widget_class = import_string(widget_class)
             if not widget_class:
                 return None
-            options = definition.get("options", {})
+
+            condition = definition.get("condition")
+            if condition:
+                check = getattr(self, condition, None)
+                if not check or not check():
+                    return None
+
+            options = dict(definition.get("options", {}))
+            provider_name = definition.get("options_provider")
+            if provider_name:
+                provider = getattr(self, provider_name, None)
+                if provider:
+                    provided = provider(definition)
+                    if not provided:
+                        return None
+                    options.update(provided)
+
             title = definition.get("title", widget_class.__name__)
-            return widget_class(self.request, title=title, **options)
+            widget = widget_class(
+                self.request,
+                title=title,
+                width=definition.get("width"),
+                priority=definition.get("priority"),
+                slug=definition.get("key"),
+                key=definition.get("key"),
+                **options,
+            )
+            data = widget.as_dict()
+            data["key"] = definition.get("key") or data.get("slug")
+            return data
 
         return None
 
     def build_widgets(self):
         widgets = []
         for definition in self.get_dashboard_widgets():
-            widget = self._resolve_widget(definition)
-            if widget is None:
-                continue
-            widgets.append(widget.as_dict())
+            widget = self._resolve_definition(definition)
+            if widget:
+                widgets.append(widget)
         widgets.sort(key=lambda widget: widget.get("priority", 10))
         return widgets
 

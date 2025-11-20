@@ -15,8 +15,19 @@ class DashboardWidget:
     widget_type = "text"
     default_width = 6  # Bootstrap grid columns
     default_priority = 10
+    template_name = None
 
-    def __init__(self, request, title, width=None, priority=None, slug=None, **kwargs):
+    def __init__(
+        self,
+        request,
+        title,
+        width=None,
+        priority=None,
+        slug=None,
+        template_name=None,
+        key=None,
+        **kwargs,
+    ):
         self.request = request
         self.title = title
         self.width = width or self.default_width
@@ -24,7 +35,10 @@ class DashboardWidget:
         base_slug = slug or slugify(title) or self.__class__.__name__.lower()
         # Slug is only used for DOM ids, so a short random suffix keeps it unique.
         self.slug = f"{base_slug}-{uuid4().hex[:5]}"
+        self.key = key or base_slug
         self.extra = kwargs
+        if template_name:
+            self.template_name = template_name
 
     def get_payload(self):
         """Return the widget-specific payload."""
@@ -39,6 +53,8 @@ class DashboardWidget:
                 "width": self.width,
                 "priority": self.priority,
                 "type": self.widget_type,
+                "template": self.template_name,
+                "key": self.key or self.slug,
             }
         )
         return payload
@@ -46,6 +62,7 @@ class DashboardWidget:
 
 class TextWidget(DashboardWidget):
     widget_type = "text"
+    template_name = "widgets/text.html"
 
     def get_payload(self):
         return {"content": self.extra.get("content", "")}
@@ -53,6 +70,7 @@ class TextWidget(DashboardWidget):
 
 class ActionsWidget(DashboardWidget):
     widget_type = "actions"
+    template_name = "widgets/actions.html"
 
     def get_payload(self):
         return {"actions": self.extra.get("actions", [])}
@@ -60,6 +78,7 @@ class ActionsWidget(DashboardWidget):
 
 class MetricsWidget(DashboardWidget):
     widget_type = "metrics"
+    template_name = "widgets/metrics.html"
 
     def get_payload(self):
         metrics = self.extra.get("metrics", [])
@@ -106,6 +125,7 @@ class ListWidget(DashboardWidget):
     """
 
     widget_type = "list"
+    template_name = "widgets/list.html"
 
     def get_payload(self):
         items = self.extra.get("items", [])
@@ -123,3 +143,19 @@ class ListWidget(DashboardWidget):
             "empty_message", "There is nothing to show here right now."
         )
         return {"items": normalized, "empty_message": empty_message}
+
+
+class AnnouncementWidget(ListWidget):
+    template_name = "widgets/announcements.html"
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("empty_message", "No announcements yet.")
+        super().__init__(*args, **kwargs)
+
+
+class ResourceListWidget(ListWidget):
+    template_name = "widgets/resources.html"
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("empty_message", "No resources available.")
+        super().__init__(*args, **kwargs)
