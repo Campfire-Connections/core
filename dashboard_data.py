@@ -3,6 +3,9 @@ from django.db.models import Count
 
 from faction.models import Faction
 from facility.models import Facility
+from enrollment.models.attendee_class import AttendeeClassEnrollment
+from enrollment.models.faculty import FacultyEnrollment
+from course.models.facility_class import FacilityClass
 
 CACHE_TIMEOUT = 60 * 5
 
@@ -139,3 +142,39 @@ def get_faction_enrollment_counts(faction: Faction):
         ]
         cache.set(key, data, CACHE_TIMEOUT)
     return data
+
+
+def get_attendee_schedule(profile, faction_enrollment=None):
+    if not profile:
+        return AttendeeClassEnrollment.objects.none()
+
+    if faction_enrollment is None:
+        enrollment = profile.enrollments.first()
+        if enrollment:
+            faction_enrollment = enrollment.faction_enrollment
+
+    if not faction_enrollment:
+        return AttendeeClassEnrollment.objects.none()
+
+    return AttendeeClassEnrollment.objects.filter(
+        attendee=profile,
+        attendee_enrollment__faction_enrollment=faction_enrollment,
+    )
+
+
+def get_faculty_schedule(profile, facility_enrollment=None):
+    if not profile:
+        return FacilityClass.objects.none()
+
+    if facility_enrollment is None:
+        enrollment = profile.enrollments.first()
+        if enrollment:
+            facility_enrollment = enrollment.facility_enrollment
+
+    if not facility_enrollment:
+        return FacilityClass.objects.none()
+
+    return FacultyEnrollment.objects.classes_for_faculty(
+        faculty_profile=profile,
+        facility_enrollment=facility_enrollment,
+    )
