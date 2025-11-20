@@ -11,6 +11,9 @@ from enrollment.models.faction import FactionEnrollment
 from core.utils import get_info_row_data
 from enrollment.models.enrollment import ActiveEnrollment
 from faction.models.faction import Faction
+from types import SimpleNamespace
+
+from organization.models import Organization
 from user.models import User
 
 from .menus import (
@@ -94,10 +97,20 @@ def user_type(request):
 
 
 def user_profile(request):
-    if request.user.is_authenticated:
-        return {"user_profile": request.user.get_profile()}
-    else:
-        return {"user_profile": []}
+    if not request.user.is_authenticated:
+        return {"user_profile": None}
+
+    profile = request.user.get_profile()
+    if profile:
+        return {"user_profile": profile}
+
+    fallback_org = Organization.objects.order_by("id").first()
+    placeholder = SimpleNamespace(
+        slug="",
+        organization=fallback_org,
+        user=request.user,
+    )
+    return {"user_profile": placeholder}
 
 
 def active_enrollment(request):

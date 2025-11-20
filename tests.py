@@ -1,6 +1,8 @@
 from datetime import date
+from types import SimpleNamespace
 
-from django.test import TestCase
+from django.test import RequestFactory, TestCase
+from django.contrib.auth import get_user_model
 
 from organization.models import Organization
 from facility.models import Facility
@@ -9,6 +11,10 @@ from course.models.course import Course
 from course.models.requirement import Requirement
 from enrollment.models.organization import OrganizationEnrollment, OrganizationCourse
 from enrollment.models.facility import FacilityEnrollment
+from core.context_processors import user_profile as user_profile_context
+User = get_user_model()
+
+
 class BaseDomainTestCase(TestCase):
     """
     Shared data builder that provisions a minimal but representative set of
@@ -71,3 +77,23 @@ class SlugAndHierarchyTests(BaseDomainTestCase):
     def test_parent_descendant_collection_includes_children(self):
         ids = self.parent_org.get_descendant_ids()
         self.assertIn(self.organization.id, ids)
+
+
+class UserProfileContextProcessorTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.user = User.objects.create_user(
+            username="noprof.user",
+            password="pass12345",
+            user_type=User.UserType.ADMIN,
+        )
+
+    def test_returns_placeholder_when_no_profile(self):
+        request = self.factory.get("/")
+        request.user = self.user
+
+        context = user_profile_context(request)
+        profile = context["user_profile"]
+
+        self.assertEqual(profile.slug, "")
+        self.assertTrue(hasattr(profile, "organization"))
