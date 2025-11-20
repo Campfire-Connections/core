@@ -15,7 +15,7 @@ PORTALS = {
     },
     "faction": {
         "label": "Faction Leader",
-        "dashboard_template": "faction/dashboard.html",
+        "dashboard_template": "leader/dashboard.html",
         "widgets": ["faction_overview", "faction_roster"],
         "allowed_user_types": ["LEADER"],
     },
