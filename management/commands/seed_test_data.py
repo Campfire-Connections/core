@@ -332,6 +332,18 @@ class TestDataBuilder:
             },
             label="Eagle Patrol",
         )
+        eagle_foxes = self._upsert(
+            Faction,
+            {"name": "Eagle Patrol - Foxes"},
+            {
+                "slug": "eagle-patrol-foxes",
+                "description": "Foxes squad for first-years.",
+                "abbreviation": "EPF",
+                "organization": cascade,
+                "parent": eagle,
+            },
+            label="Eagle Patrol Foxes",
+        )
         aurora = self._upsert(
             Faction,
             {"name": "Aurora Crew"},
@@ -344,7 +356,26 @@ class TestDataBuilder:
             },
             label="Aurora Crew",
         )
-        self.factions.update({"eagle": eagle, "aurora": aurora})
+        aurora_voyagers = self._upsert(
+            Faction,
+            {"name": "Aurora Crew - Voyagers"},
+            {
+                "slug": "aurora-crew-voyagers",
+                "description": "Voyagers sub-crew specializing in logistics.",
+                "abbreviation": "ACV",
+                "organization": cascade,
+                "parent": aurora,
+            },
+            label="Aurora Crew Voyagers",
+        )
+        self.factions.update(
+            {
+                "eagle": eagle,
+                "eagle_foxes": eagle_foxes,
+                "aurora": aurora,
+                "aurora_voyagers": aurora_voyagers,
+            }
+        )
 
     def _create_courses(self):
         medical = self._upsert(
@@ -700,14 +731,14 @@ class TestDataBuilder:
             user=self.users["attendee_amy"],
             defaults={
                 "organization": cascade,
-                "faction": eagle,
+                "faction": self.factions["eagle_foxes"],
             },
         )
         self.attendee_profiles["riley"], _ = AttendeeProfile.objects.update_or_create(
             user=self.users["attendee_riley"],
             defaults={
                 "organization": cascade,
-                "faction": aurora,
+                "faction": self.factions["aurora_voyagers"],
             },
         )
 
