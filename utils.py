@@ -4,6 +4,21 @@ from django.core.cache import cache
 
 from user.models import User
 
+
+def _safe_count(value):
+    if value is None:
+        return 0
+    count_attr = getattr(value, "count", None)
+    if callable(count_attr):
+        try:
+            return count_attr()
+        except TypeError:
+            pass
+    try:
+        return len(value)
+    except TypeError:
+        return 0
+
 def get_info_row_data(user):
     """Retrieves cached dashboard information rows for different user types.
 
@@ -24,23 +39,23 @@ def get_info_row_data(user):
         if user.user_type == User.UserType.ATTENDEE:
             profile = getattr(user, "attendeeprofile_profile", None)
             data = [
-                ("Enrollments", "#", getattr(profile, "enrollments", []).count() if profile else 0, 'count', 'count'),
-                ("Messages", "#", getattr(profile, "messages", []).count() if profile else 0, 'count', 'count'),
-                ("ToDo", "#", getattr(profile, "todo", []).count() if profile else 0, 'count', 'count'),
+                ("Enrollments", "#", _safe_count(getattr(profile, "enrollments", None)), "count", "count"),
+                ("Messages", "#", _safe_count(getattr(profile, "messages", None)), "count", "count"),
+                ("ToDo", "#", _safe_count(getattr(profile, "todo", None)), "count", "count"),
             ]
         elif user.user_type == User.UserType.LEADER:
             profile = getattr(user, "leaderprofile_profile", None)
             data = [
-                ("Enrollments", "#", getattr(profile, "enrollments", []).count() if profile else 0, 'count', 'count'),
-                ("Messages", "#", getattr(profile, "messages", []).count() if profile else 0, 'count', 'count'),
-                ("ToDo", "#", getattr(profile, "achievements", []).count() if profile else 0, 'count', 'count'),
+                ("Enrollments", "#", _safe_count(getattr(profile, "enrollments", None)), "count", "count"),
+                ("Messages", "#", _safe_count(getattr(profile, "messages", None)), "count", "count"),
+                ("ToDo", "#", _safe_count(getattr(profile, "achievements", None)), "count", "count"),
             ]
         elif user.user_type == User.UserType.FACULTY:
             profile = getattr(user, "facultyprofile_profile", None)
-            msgs = getattr(profile, "messages", []).count() if profile else 0
-            todo = getattr(profile, "todo", []).count() if profile else 0
+            msgs = _safe_count(getattr(profile, "messages", None))
+            todo = _safe_count(getattr(profile, "todo", None))
             data = [
-                ("Enrollments", "#", getattr(profile, "enrollments", []).count() if profile else 0, 'count first', 'count first'),
+                ("Enrollments", "#", _safe_count(getattr(profile, "enrollments", None)), 'count first', 'count first'),
                 ("Messages", "#", msgs, 'count', 'count'),
                 ("ToDo", "#", todo, 'count', 'count'),
             ]
