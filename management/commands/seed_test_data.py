@@ -829,8 +829,6 @@ class TestDataBuilder:
                 "faction_enrollment": self.faction_enrollments["eagle"],
                 "quarters": pinecone,
                 "role": "Unit Leader",
-                "start": self.faction_enrollments["eagle"].start,
-                "end": self.faction_enrollments["eagle"].end,
             },
             label="Leo Castor Week 1",
         )
@@ -845,8 +843,6 @@ class TestDataBuilder:
                 "faction_enrollment": self.faction_enrollments["aurora"],
                 "quarters": summit_lodge,
                 "role": "Cohort Guide",
-                "start": self.faction_enrollments["aurora"].start,
-                "end": self.faction_enrollments["aurora"].end,
             },
             label="Sara Nguyen Summit",
         )
