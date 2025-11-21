@@ -22,22 +22,25 @@ def get_info_row_data(user):
 
     if not data:
         if user.user_type == User.UserType.ATTENDEE:
+            profile = getattr(user, "attendeeprofile_profile", None)
             data = [
-                ("Enrollments", "#", user.attendeeprofile_profile.enrollments.count(), 'count', 'count'),
-                ("Messages", "#", user.attendeeprofile_profile.messages.count(), 'count', 'count'),
-                ("ToDo", "#", user.attendeeprofile_profile.todo.count(), 'count', 'count'),
+                ("Enrollments", "#", getattr(profile, "enrollments", []).count() if profile else 0, 'count', 'count'),
+                ("Messages", "#", getattr(profile, "messages", []).count() if profile else 0, 'count', 'count'),
+                ("ToDo", "#", getattr(profile, "todo", []).count() if profile else 0, 'count', 'count'),
             ]
         elif user.user_type == User.UserType.LEADER:
+            profile = getattr(user, "leaderprofile_profile", None)
             data = [
-                ("Enrollments", "#", user.leaderprofile_profile.enrollments.count(), 'count', 'count'),
-                ("Messages", "#", user.leaderprofile_profile.messages.count(), 'count', 'count'),
-                ("ToDo", "#", user.leaderprofile_profile.achievements.count(), 'count', 'count'),
+                ("Enrollments", "#", getattr(profile, "enrollments", []).count() if profile else 0, 'count', 'count'),
+                ("Messages", "#", getattr(profile, "messages", []).count() if profile else 0, 'count', 'count'),
+                ("ToDo", "#", getattr(profile, "achievements", []).count() if profile else 0, 'count', 'count'),
             ]
         elif user.user_type == User.UserType.FACULTY:
-            msgs = 0 # user.facultyprofile_profile.messages.count()
-            todo = 0 # user.facultyprofile_profile.todo.count()
+            profile = getattr(user, "facultyprofile_profile", None)
+            msgs = getattr(profile, "messages", []).count() if profile else 0
+            todo = getattr(profile, "todo", []).count() if profile else 0
             data = [
-                ("Enrollments", "#", user.facultyprofile_profile.enrollments.count(), 'count first', 'count first'),
+                ("Enrollments", "#", getattr(profile, "enrollments", []).count() if profile else 0, 'count first', 'count first'),
                 ("Messages", "#", msgs, 'count', 'count'),
                 ("ToDo", "#", todo, 'count', 'count'),
             ]
