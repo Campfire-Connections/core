@@ -18,17 +18,26 @@ from user.models import User
 
 from .menus import toplinks
 from .menu_registry import build_menu_for_user
+from core.models.navigation import NavigationPreference
 
 logger = logging.getLogger(__name__)
 
 
 def dynamic_menu(request):
     if not request.user.is_authenticated:
-        return {"menu_items": [], "quick_menu_items": []}
-    menu = build_menu_for_user(request.user)
+        return {"menu_items": [], "quick_menu_items": [], "favorite_menu_keys": []}
+
+    try:
+        preferences = request.user.navigation_preference
+    except NavigationPreference.DoesNotExist:
+        preferences = NavigationPreference.objects.create(user=request.user)
+
+    favorites = list(preferences.favorite_keys or [])
+    menu = build_menu_for_user(request.user, favorites=favorites)
     return {
         "menu_items": menu.get("primary", []),
         "quick_menu_items": menu.get("quick", []),
+        "favorite_menu_keys": favorites,
     }
 
 

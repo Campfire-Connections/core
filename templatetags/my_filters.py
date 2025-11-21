@@ -66,3 +66,11 @@ def int_filter(value):
 @register.filter(name="spacify")
 def spacify(value):
     return value.replace("_", " ")
+
+
+@register.filter(name="contains")
+def contains(collection, item):
+    try:
+        return item in collection
+    except TypeError:
+        return False

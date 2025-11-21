@@ -19,6 +19,7 @@ from core.context_processors import user_profile as user_profile_context
 from core.views.base import BaseDashboardView
 from core.widgets import TextWidget
 from core.models.dashboard import DashboardLayout
+from core.models.navigation import NavigationPreference
 from core.menu_registry import build_menu_for_user
 from user.models import (
     create_profile as create_profile_signal,
@@ -241,3 +242,30 @@ class MenuRegistryTests(BaseDomainTestCase):
         self.assertTrue(
             any(item["label"] == "Faction Dashboard" for item in menu_data["quick"])
         )
+
+    def test_favorite_entries_are_added_to_quick_menu(self):
+        menu_data = build_menu_for_user(
+            self.leader, favorites=["leader_enrollments"]
+        )
+        favorite_entry = next(
+            (item for item in menu_data["quick"] if item.get("key") == "leader_enrollments"),
+            None,
+        )
+        self.assertIsNotNone(favorite_entry)
+        self.assertTrue(favorite_entry.get("favorite"))
+
+
+class NavigationPreferenceModelTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="pref.user",
+            password="pass12345",
+            user_type=User.UserType.ADMIN,
+        )
+
+    def test_add_and_remove_favorites(self):
+        preferences = NavigationPreference.objects.create(user=self.user)
+        preferences.add_favorite("dashboard")
+        self.assertIn("dashboard", preferences.favorite_keys)
+        preferences.remove_favorite("dashboard")
+        self.assertNotIn("dashboard", preferences.favorite_keys)
