@@ -164,17 +164,15 @@ def get_attendee_schedule(profile, faction_enrollment=None):
 
 def get_faculty_schedule(profile, facility_enrollment=None):
     if not profile:
-        return FacilityClass.objects.none()
+        return FacultyEnrollment.objects.none()
 
     if facility_enrollment is None:
         enrollment = profile.enrollments.first()
         if enrollment:
             facility_enrollment = enrollment.facility_enrollment
 
-    if not facility_enrollment:
-        return FacilityClass.objects.none()
+    qs = FacultyEnrollment.objects.filter(faculty=profile)
+    if facility_enrollment:
+        qs = qs.filter(facility_enrollment=facility_enrollment)
 
-    return FacultyEnrollment.objects.classes_for_faculty(
-        faculty_profile=profile,
-        facility_enrollment=facility_enrollment,
-    )
+    return qs.select_related("facility_enrollment", "facility_enrollment__facility")
