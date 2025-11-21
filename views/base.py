@@ -864,13 +864,33 @@ class BaseDashboardView(BaseManageView):
         return None
 
     def build_widgets(self):
+        preferences = self.get_dashboard_preferences()
         widgets = []
         for definition in self.get_dashboard_widgets():
             widget = self._resolve_definition(definition)
             if widget:
                 widgets.append(widget)
+        widgets = self.apply_layout_order(widgets, preferences)
         widgets.sort(key=lambda widget: widget.get("priority", 10))
         return widgets
+
+    def apply_layout_order(self, widgets, preferences):
+        if not preferences or not preferences.layout:
+            return widgets
+        try:
+            order = json.loads(preferences.layout)
+        except (TypeError, ValueError):
+            return widgets
+        widget_map = {widget.get("key"): widget for widget in widgets if widget.get("key")}
+        ordered = []
+        seen = set()
+        for key in order:
+            widget = widget_map.get(key)
+            if widget:
+                ordered.append(widget)
+                seen.add(key)
+        ordered.extend(widget for widget in widgets if widget.get("key") not in seen)
+        return ordered
 
     def get_context_data(self, **kwargs):
         """

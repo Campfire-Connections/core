@@ -1,3 +1,4 @@
+import json
 from datetime import date
 from types import SimpleNamespace
 from contextlib import contextmanager
@@ -176,6 +177,16 @@ class DashboardRegistryTests(TestCase):
         self.assertIn("visible", keys)
         self.assertNotIn("hidden", keys)
 
+    def test_layout_order_is_respected(self):
+        DashboardLayout.objects.create(
+            user=self.user,
+            portal_key="test-dashboard",
+            layout=json.dumps(["hidden", "visible"]),
+        )
+        view = self._build_view()
+        widgets = view.build_widgets()
+        self.assertEqual([w["key"] for w in widgets][:2], ["hidden", "visible"])
+
 
 class MenuRegistryTests(BaseDomainTestCase):
     @classmethod
@@ -205,8 +216,8 @@ class MenuRegistryTests(BaseDomainTestCase):
         return None
 
     def test_leader_menu_has_manage_enrollments_link(self):
-        menu = build_menu_for_user(self.leader)
-        section = self._find_menu_item(menu, "Faction Mgmt")
+        menu_data = build_menu_for_user(self.leader)
+        section = self._find_menu_item(menu_data["primary"], "Faction Mgmt")
         self.assertIsNotNone(section)
         enrollment_entry = next(
             (child for child in section["children"] if child["label"] == "Manage Enrollments"),
@@ -216,11 +227,17 @@ class MenuRegistryTests(BaseDomainTestCase):
         self.assertIn(self.faction.slug, enrollment_entry["url"])
 
     def test_leader_without_faction_gets_disabled_link(self):
-        menu = build_menu_for_user(self.leader_without_faction)
-        section = self._find_menu_item(menu, "Faction Mgmt")
+        menu_data = build_menu_for_user(self.leader_without_faction)
+        section = self._find_menu_item(menu_data["primary"], "Faction Mgmt")
         enrollment_entry = next(
             (child for child in section["children"] if child["label"] == "Manage Enrollments"),
             None,
         )
         self.assertIsNotNone(enrollment_entry)
         self.assertIsNone(enrollment_entry["url"])
+
+    def test_quick_menu_contains_shortcut(self):
+        menu_data = build_menu_for_user(self.leader)
+        self.assertTrue(
+            any(item["label"] == "Faction Dashboard" for item in menu_data["quick"])
+        )

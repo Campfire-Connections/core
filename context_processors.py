@@ -24,9 +24,12 @@ logger = logging.getLogger(__name__)
 
 def dynamic_menu(request):
     if not request.user.is_authenticated:
-        return {"menu_items": []}
+        return {"menu_items": [], "quick_menu_items": []}
     menu = build_menu_for_user(request.user)
-    return {"menu_items": menu}
+    return {
+        "menu_items": menu.get("primary", []),
+        "quick_menu_items": menu.get("quick", []),
+    }
 
 
 def top_links_menu(request):

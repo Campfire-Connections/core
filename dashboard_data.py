@@ -125,6 +125,16 @@ def get_facility_metrics(facility: Facility | None):
     return metrics
 
 
+def get_facility_overview_text(facility: Facility | None):
+    if not facility:
+        return "Customize this dashboard by wiring widgets that highlight occupancy, schedules, or outstanding actions for your facility team."
+    dept_count = facility.departments.count()
+    faculty_count = facility.facultyprofile_set.count()
+    return (
+        f"{facility.name} currently has {dept_count} departments and {faculty_count} active faculty members."
+    )
+
+
 def get_faction_enrollment_counts(faction: Faction):
     if not faction:
         return []

@@ -58,7 +58,15 @@ MENU_REGISTRY = {
                     "url_name": "resources",
                 },
             ],
-        }
+        },
+        {
+            "key": "attendee_quick",
+            "label": "My Schedule",
+            "icon": "fas fa-calendar",
+            "url_name": "attendees:enrollments:index",
+            "dynamic_kwargs": {"slug": "profile.slug"},
+            "group": "quick",
+        },
     ],
     "LEADER": [
         {
@@ -83,6 +91,13 @@ MENU_REGISTRY = {
                     "url_name": "resources",
                 },
             ],
+        },
+        {
+            "key": "leader_quick",
+            "label": "Faction Dashboard",
+            "icon": "fas fa-bullseye",
+            "url_name": "leaders:dashboard",
+            "group": "quick",
         },
     ],
     "FACULTY": [
@@ -132,8 +147,43 @@ MENU_REGISTRY = {
                 },
             ],
         },
+        {
+            "key": "faculty_quick",
+            "label": "My Faculty Portal",
+            "icon": "fas fa-graduation-cap",
+            "url_name": "facultys:manage",
+            "group": "quick",
+        },
+    ],
+    "ADMIN": [
+        {
+            "key": "admin_tools",
+            "label": "Admin",
+            "icon": "fas fa-tools",
+            "children": [
+                {
+                    "label": "Django Admin",
+                    "icon": "fas fa-shield-alt",
+                    "url_name": "admin:index",
+                },
+                {
+                    "label": "User Management",
+                    "icon": "fas fa-users-cog",
+                    "url_name": "leaders:index",
+                },
+            ],
+        },
+        {
+            "key": "admin_quick",
+            "label": "Admin Site",
+            "icon": "fas fa-lock",
+            "url_name": "admin:index",
+            "group": "quick",
+        },
     ],
 }
+
+MENU_REGISTRY["ORGANIZATION_FACULTY"] = MENU_REGISTRY["FACULTY"]
 
 
 def get_menu_definition_for_user(user):
@@ -146,14 +196,16 @@ def get_menu_definition_for_user(user):
 
 
 def build_menu_for_user(user):
-    menu = []
+    primary = []
+    quick = []
     profile = get_profile(user)
     base_context = {"user": user, "profile": profile}
     for definition in get_menu_definition_for_user(user):
         resolved = resolve_menu_entry(definition, base_context)
         if resolved:
-            menu.append(resolved)
-    return menu
+            target = quick if definition.get("group") == "quick" else primary
+            target.append(resolved)
+    return {"primary": primary, "quick": quick}
 
 
 def resolve_menu_entry(entry, base_context):
