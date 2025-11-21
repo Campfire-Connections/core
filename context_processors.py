@@ -5,6 +5,7 @@ import logging
 
 from django.core.cache import cache
 from django.db.models import Q
+from django.urls import NoReverseMatch, reverse
 
 from enrollment.models.facility import FacilityEnrollment
 from enrollment.models.faction import FactionEnrollment
@@ -25,7 +26,12 @@ logger = logging.getLogger(__name__)
 
 def dynamic_menu(request):
     if not request.user.is_authenticated:
-        return {"menu_items": [], "quick_menu_items": [], "favorite_menu_keys": []}
+        return {
+            "menu_items": [],
+            "quick_menu_items": [],
+            "favorite_menu_keys": [],
+            "toggle_nav_favorite_url": "",
+        }
 
     try:
         preferences = request.user.navigation_preference
@@ -34,10 +40,15 @@ def dynamic_menu(request):
 
     favorites = list(preferences.favorite_keys or [])
     menu = build_menu_for_user(request.user, favorites=favorites)
+    try:
+        toggle_url = reverse("toggle_nav_favorite")
+    except NoReverseMatch:
+        toggle_url = ""
     return {
         "menu_items": menu.get("primary", []),
         "quick_menu_items": menu.get("quick", []),
         "favorite_menu_keys": favorites,
+        "toggle_nav_favorite_url": toggle_url,
     }
 
 
