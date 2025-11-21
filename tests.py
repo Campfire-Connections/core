@@ -1,12 +1,15 @@
 from datetime import date
 from types import SimpleNamespace
+from contextlib import contextmanager
 
 from django.test import RequestFactory, TestCase
 from django.contrib.auth import get_user_model
+from django.db.models.signals import post_save
 
 from organization.models import Organization
 from facility.models import Facility
 from faction.models import Faction
+from faction.models.leader import LeaderProfile
 from course.models.course import Course
 from course.models.requirement import Requirement
 from enrollment.models.organization import OrganizationEnrollment, OrganizationCourse
@@ -15,6 +18,12 @@ from core.context_processors import user_profile as user_profile_context
 from core.views.base import BaseDashboardView
 from core.widgets import TextWidget
 from core.models.dashboard import DashboardLayout
+from core.menu_registry import build_menu_for_user
+from user.models import (
+    create_profile as create_profile_signal,
+    save_profile as save_profile_signal,
+    update_profile_slug as update_profile_slug_signal,
+)
 User = get_user_model()
 
 
@@ -68,6 +77,22 @@ class BaseDomainTestCase(TestCase):
             start=date(2025, 6, 1),
             end=date(2025, 6, 15),
         )
+
+
+@contextmanager
+def mute_profile_signals():
+    receivers = [
+        create_profile_signal,
+        save_profile_signal,
+        update_profile_slug_signal,
+    ]
+    for receiver in receivers:
+        post_save.disconnect(receiver, sender=User)
+    try:
+        yield
+    finally:
+        for receiver in receivers:
+            post_save.connect(receiver, sender=User)
 
 
 class SlugAndHierarchyTests(BaseDomainTestCase):
@@ -150,3 +175,52 @@ class DashboardRegistryTests(TestCase):
         keys = [widget["key"] for widget in widgets]
         self.assertIn("visible", keys)
         self.assertNotIn("hidden", keys)
+
+
+class MenuRegistryTests(BaseDomainTestCase):
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        with mute_profile_signals():
+            cls.leader = User.objects.create_user(
+                username="leader.menu",
+                password="pass12345",
+                user_type=User.UserType.LEADER,
+            )
+            cls.leader_without_faction = User.objects.create_user(
+                username="leader.no.faction",
+                password="pass12345",
+                user_type=User.UserType.LEADER,
+            )
+        LeaderProfile.objects.create(
+            user=cls.leader,
+            organization=cls.organization,
+            faction=cls.faction,
+        )
+
+    def _find_menu_item(self, menu, label):
+        for section in menu:
+            if section["label"] == label:
+                return section
+        return None
+
+    def test_leader_menu_has_manage_enrollments_link(self):
+        menu = build_menu_for_user(self.leader)
+        section = self._find_menu_item(menu, "Faction Mgmt")
+        self.assertIsNotNone(section)
+        enrollment_entry = next(
+            (child for child in section["children"] if child["label"] == "Manage Enrollments"),
+            None,
+        )
+        self.assertIsNotNone(enrollment_entry)
+        self.assertIn(self.faction.slug, enrollment_entry["url"])
+
+    def test_leader_without_faction_gets_disabled_link(self):
+        menu = build_menu_for_user(self.leader_without_faction)
+        section = self._find_menu_item(menu, "Faction Mgmt")
+        enrollment_entry = next(
+            (child for child in section["children"] if child["label"] == "Manage Enrollments"),
+            None,
+        )
+        self.assertIsNotNone(enrollment_entry)
+        self.assertIsNone(enrollment_entry["url"])

@@ -16,69 +16,16 @@ from types import SimpleNamespace
 from organization.models import Organization
 from user.models import User
 
-from .menus import (
-    FACULTY_ADMIN_MENU,
-    ATTENDEE_MENU,
-    LEADER_MENU,
-    LEADER_ADMIN_MENU,
-    FACULTY_MENU,
-    ORGANIZATION_FACULTY_MENU,
-    toplinks,
-)
+from .menus import toplinks
+from .menu_registry import build_menu_for_user
 
 logger = logging.getLogger(__name__)
 
 
-def build_dynamic_url(item, user):
-    if "dynamic_params" in item:
-        for key, path in item["dynamic_params"].items():
-            if path:
-                logger.debug(f"Processing dynamic param: {path}")
-                value = user
-                for attr in path.split("."):
-                    value = getattr(value, attr, None)
-                    if value is None:
-                        logger.warning(f"Attribute '{attr}' in '{path}' is None.")
-                        break
-                item["dynamic_params"][key] = value
-            else:
-                logger.warning(f"Dynamic param for key '{key}' is None.")
-                item["dynamic_params"][key] = None
-    return item
-
-
 def dynamic_menu(request):
-    menu = []
-    if request.user.is_authenticated:
-        user = request.user
-        user_type = user.user_type
-        menu_mapping = {
-            "FACULTY": FACULTY_MENU,
-            "ATTENDEE": ATTENDEE_MENU,
-            "LEADER": LEADER_MENU,
-            "ORGANIZATION_FACULTY": ORGANIZATION_FACULTY_MENU,
-        }
-        if user_type == "FACULTY" and user.is_admin:
-            menu = FACULTY_ADMIN_MENU.copy()
-        elif user_type == "LEADER" and user.is_admin:
-            menu = LEADER_ADMIN_MENU.copy()
-        else:
-            menu = menu_mapping.get(user_type, []).copy()
-
-        context = {"user": user}
-        # Add any additional context needed for dynamic params
-        if hasattr(user, "facultyprofile"):
-            context["faculty_slug"] = user.facultyprofile.facility.slug
-
-        for item in menu:
-            item = build_dynamic_url(item, user)
-
-            if "sub_items" in item:
-                for sub_item in item["sub_items"]:
-                    sub_item = build_dynamic_url(sub_item, user)
-
-        logger.debug(f"menu: {menu}")
-
+    if not request.user.is_authenticated:
+        return {"menu_items": []}
+    menu = build_menu_for_user(request.user)
     return {"menu_items": menu}
 
 
