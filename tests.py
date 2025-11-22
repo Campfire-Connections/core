@@ -80,6 +80,18 @@ class BaseDomainTestCase(TestCase):
             end=date(2025, 6, 15),
         )
 
+    def _create_superuser(self, **overrides):
+        """
+        Helper for view tests that need an authenticated admin.
+        """
+        params = {
+            "username": overrides.pop("username", "test.superuser"),
+            "email": overrides.pop("email", "admin@example.com"),
+            "password": overrides.pop("password", "pass12345"),
+        }
+        params.update(overrides)
+        return User.objects.create_superuser(**params)
+
 
 @contextmanager
 def mute_profile_signals():
