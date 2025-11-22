@@ -86,14 +86,24 @@ def user_profile(request):
 def active_enrollment(request):
     if request.user.is_superuser:
         return {}
-    if active_enrollment_id := request.session.get("active_enrollment_id"):
-        active_enrollment = ActiveEnrollment.objects.get(id=active_enrollment_id)
+    active_enrollment = ActiveEnrollment()
+    active_enrollment_id = request.session.get("active_enrollment_id")
+    if active_enrollment_id:
+        active_enrollment = (
+            ActiveEnrollment.objects.filter(id=active_enrollment_id).first()
+            or active_enrollment
+        )
     elif request.user.is_authenticated:
-        active_enrollment = ActiveEnrollment.objects.get(
-            user_id=request.user.id
-        ) or ActiveEnrollment(user_id=request.user.id)
-    else:
-        active_enrollment = ActiveEnrollment()
+        active_enrollment = (
+            ActiveEnrollment.objects.filter(user_id=request.user.id).first()
+            or ActiveEnrollment(user_id=request.user.id)
+        )
+    if (
+        request.user.is_authenticated
+        and not getattr(active_enrollment, "user_id", None)
+    ):
+        active_enrollment.user_id = request.user.id
+
     faction_enrollment = active_enrollment.faction_enrollment or {}
     if faction_enrollment:
         faction_id = active_enrollment.faction_enrollment.faction.id or 0

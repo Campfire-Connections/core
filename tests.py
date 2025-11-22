@@ -15,7 +15,11 @@ from course.models.course import Course
 from course.models.requirement import Requirement
 from enrollment.models.organization import OrganizationEnrollment, OrganizationCourse
 from enrollment.models.facility import FacilityEnrollment
-from core.context_processors import user_profile as user_profile_context
+from enrollment.models.enrollment import ActiveEnrollment
+from core.context_processors import (
+    active_enrollment as active_enrollment_context,
+    user_profile as user_profile_context,
+)
 from core.views.base import BaseDashboardView
 from core.widgets import TextWidget
 from core.models.dashboard import DashboardLayout
@@ -139,6 +143,37 @@ class UserProfileContextProcessorTests(TestCase):
 
         self.assertEqual(profile.slug, "")
         self.assertTrue(hasattr(profile, "organization"))
+
+
+class ActiveEnrollmentContextProcessorTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        with mute_profile_signals():
+            self.user = User.objects.create_user(
+                username="active.user",
+                password="pass12345",
+                user_type=User.UserType.LEADER,
+            )
+
+    def _build_request(self):
+        request = self.factory.get("/")
+        request.user = self.user
+        request.session = {}
+        return request
+
+    def test_returns_placeholder_when_record_missing(self):
+        request = self._build_request()
+        context = active_enrollment_context(request)
+        enrollment = context["active_enrollment"]
+        self.assertIsInstance(enrollment, ActiveEnrollment)
+        self.assertEqual(enrollment.user_id, self.user.id)
+
+    def test_uses_existing_session_record(self):
+        record = ActiveEnrollment.objects.create(user_id=self.user.id)
+        request = self._build_request()
+        request.session["active_enrollment_id"] = record.id
+        context = active_enrollment_context(request)
+        self.assertEqual(context["active_enrollment"].id, record.id)
 
 
 class DummyDashboardView(BaseDashboardView):
