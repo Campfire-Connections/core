@@ -25,11 +25,7 @@ from core.widgets import TextWidget
 from core.models.dashboard import DashboardLayout
 from core.models.navigation import NavigationPreference
 from core.menu_registry import build_menu_for_user
-from user.models import (
-    create_profile as create_profile_signal,
-    save_profile as save_profile_signal,
-    update_profile_slug as update_profile_slug_signal,
-)
+from user.models import ensure_profile as ensure_profile_signal
 User = get_user_model()
 
 
@@ -99,18 +95,11 @@ class BaseDomainTestCase(TestCase):
 
 @contextmanager
 def mute_profile_signals():
-    receivers = [
-        create_profile_signal,
-        save_profile_signal,
-        update_profile_slug_signal,
-    ]
-    for receiver in receivers:
-        post_save.disconnect(receiver, sender=User)
+    post_save.disconnect(ensure_profile_signal, sender=User)
     try:
         yield
     finally:
-        for receiver in receivers:
-            post_save.connect(receiver, sender=User)
+        post_save.connect(ensure_profile_signal, sender=User)
 
 
 class SlugAndHierarchyTests(BaseDomainTestCase):
