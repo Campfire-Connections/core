@@ -169,6 +169,12 @@ MENU_REGISTRY = {
                     "url_name": "admin_portal_dashboard",
                 },
                 {
+                    "key": "admin_users",
+                    "label": "Manage Users",
+                    "icon": "fas fa-users-cog",
+                    "url_name": "admin_user_list",
+                },
+                {
                     "key": "admin_site",
                     "label": "Django Admin",
                     "icon": "fas fa-shield-alt",

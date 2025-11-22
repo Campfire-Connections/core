@@ -68,10 +68,6 @@ class BaseTable(ActionsColumnMixin, ActionUrlMixin, tables.Table):
         if fields:
             self.filter_columns(fields)
 
-        # Dynamically add action columns
-        if hasattr(self, "available_actions"):
-            self.add_actions_column()
-
         if debug_mode:
             self.log_debug_info()
 

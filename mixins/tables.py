@@ -231,7 +231,8 @@ class ActionsColumnMixin(ActionUrlMixin, tables.Table):
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.user = user  # Store the user for permission checks in render
-        self.add_actions_column()
+        if getattr(self, "available_actions", None):
+            self.add_actions_column()
 
         if user and user.is_admin:
             self.add_admin_columns()

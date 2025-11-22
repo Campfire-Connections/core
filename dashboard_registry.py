@@ -151,5 +151,13 @@ DASHBOARD_REGISTRY = {
             "priority": 1,
             "width": 6,
         },
+        {
+            "key": "admin_users",
+            "widget": TableWidget,
+            "title": "Users",
+            "options_provider": "get_admin_users_widget",
+            "priority": 2,
+            "width": 12,
+        },
     ],
 }
