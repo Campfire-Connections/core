@@ -163,6 +163,12 @@ MENU_REGISTRY = {
             "icon": "fas fa-tools",
             "children": [
                 {
+                    "key": "admin_dashboard",
+                    "label": "Admin Dashboard",
+                    "icon": "fas fa-tachometer-alt",
+                    "url_name": "admin_portal_dashboard",
+                },
+                {
                     "key": "admin_site",
                     "label": "Django Admin",
                     "icon": "fas fa-shield-alt",
@@ -178,9 +184,9 @@ MENU_REGISTRY = {
         },
         {
             "key": "admin_quick",
-            "label": "Admin Site",
+            "label": "Admin Dashboard",
             "icon": "fas fa-lock",
-            "url_name": "admin:index",
+            "url_name": "admin_portal_dashboard",
             "group": "quick",
         },
     ],

@@ -134,4 +134,22 @@ DASHBOARD_REGISTRY = {
             "width": 12,
         },
     ],
+    "admin": [
+        {
+            "key": "admin_actions",
+            "widget": ActionsWidget,
+            "title": "Admin Shortcuts",
+            "options_provider": "get_admin_actions_widget",
+            "priority": 0,
+            "width": 6,
+        },
+        {
+            "key": "admin_resources",
+            "widget": ResourceListWidget,
+            "title": "Admin Resources",
+            "options_provider": "get_admin_resources_widget",
+            "priority": 1,
+            "width": 6,
+        },
+    ],
 }
