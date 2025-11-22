@@ -31,6 +31,28 @@ from core.dashboard_registry import DASHBOARD_REGISTRY
 from core.models.dashboard import DashboardLayout
 
 
+def build_tables_from_config(request, tables_config, default_paginate=10):
+    """
+    Instantiate django-tables2 tables from a configuration dictionary.
+    """
+
+    initialized_tables = {}
+    for table_name, config in tables_config.items():
+        table_class = config["class"]
+        queryset = config["queryset"]
+        paginate_by = (
+            config["paginate_by"] if "paginate_by" in config else default_paginate
+        )
+
+        table = table_class(queryset, request=request)
+        if paginate_by:
+            RequestConfig(request, paginate={"per_page": paginate_by}).configure(table)
+        else:
+            RequestConfig(request).configure(table)
+        initialized_tables[table_name] = table
+    return initialized_tables
+
+
 class BaseTemplateView(TemplateView):
     """
     Base class for template views that adds a customizable page title to the context data. This
@@ -408,30 +430,10 @@ class BaseManageView(TemplateView, ActionContextMixin):
 
     def get_tables(self):
         """
-        Initializes and configures the tables defined in the `tables_config` attribute. This method
-        retrieves the configuration for each table, creates an instance of the corresponding table
-        class, applies pagination settings, and returns a dictionary of initialized tables.
-
-        Args:
-            self: The instance of the class.
-
-        Returns:
-            dict: A dictionary containing the initialized tables, keyed by their names.
+        Initializes and configures the tables defined in the `tables_config` attribute.
         """
 
-        initialized_tables = {}
-        for table_name, config in self.get_tables_config().items():
-            table_class = config["class"]
-            queryset = config["queryset"]
-            paginate_by = config.get("paginate_by", 10)
-
-            table = table_class(queryset, request=self.request)
-            RequestConfig(self.request, paginate={"per_page": paginate_by}).configure(
-                table
-            )
-            initialized_tables[table_name] = table
-
-        return initialized_tables
+        return build_tables_from_config(self.request, self.get_tables_config())
 
     def get_context_data(self, **kwargs):
         """
