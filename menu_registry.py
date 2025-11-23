@@ -161,6 +161,13 @@ MENU_REGISTRY = {
                     "dynamic_kwargs": {"facility_slug": "profile.facility.slug"},
                     "condition": is_faculty_admin,
                 },
+                {
+                    "key": "faculty_facility_enrollments",
+                    "label": "Facility Enrollments",
+                    "icon": "fas fa-calendar-alt",
+                    "url_name": "facilities:enrollments:index",
+                    "dynamic_kwargs": {"facility_slug": "profile.facility.slug"},
+                },
                 {"separator": True},
                 {
                     "key": "faculty_new",
@@ -183,6 +190,21 @@ MENU_REGISTRY = {
                     "url_name": "quarters:index",
                     "dynamic_kwargs": {"facility_slug": "profile.facility.slug"},
                     "condition": is_faculty_admin,
+                },
+                {"separator": True},
+                {
+                    "key": "faculty_courses",
+                    "label": "Manage Courses",
+                    "icon": "fas fa-book",
+                    "url_name": "facilities:courses:index",
+                    "dynamic_kwargs": {"facility_slug": "profile.facility.slug"},
+                },
+                {
+                    "key": "faculty_classes",
+                    "label": "Manage Classes",
+                    "icon": "fas fa-chalkboard",
+                    "url_name": "facilities:classes:index",
+                    "dynamic_kwargs": {"facility_slug": "profile.facility.slug"},
                 },
                 {
                     "key": "faculty_departments",
