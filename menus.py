@@ -5,10 +5,10 @@ FACULTY_ADMIN_MENU = [
     # {"name": "Dashboard", "url_name": "dashboard", "icon": "fa-dashboard"},
     {
         "name": "Faculty Management",
-        "url_name": "facultys:manage",
+        "url_name": "faculty:manage",
         "icon": "fa-users",
         "sub_items": [
-            {"name": "Add Faculty", "url_name": "facultys:new"},
+            {"name": "Add Faculty", "url_name": "faculty:new"},
             {"name": "Assign Classes", "url_name": "home"},
         ],
     },
