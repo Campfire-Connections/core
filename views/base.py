@@ -214,7 +214,7 @@ class BaseTableListView(SingleTableView):
     table_class = None
     filterset_class = None
 
-    def get_table(self):
+    def get_table(self, **kwargs):
         """
         Retrieves the table for the view and applies pagination based on the request parameters.
         This method enhances the default table retrieval by ensuring that the table is paginated,
@@ -227,7 +227,7 @@ class BaseTableListView(SingleTableView):
             Table: The paginated table object ready for rendering.
         """
 
-        table = super().get_table()
+        table = super().get_table(**kwargs)
         table.paginate(page=self.request.GET.get("page", 1), per_page=10)
         return table
 
