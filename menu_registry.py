@@ -73,18 +73,13 @@ MENU_REGISTRY = {
             "icon": "fas fa-users",
             "children": [
                 {
-                    "key": "leader_dashboard",
-                    "label": "Dashboard",
-                    "icon": "fas fa-bullseye",
-                    "url_name": "leaders:dashboard",
-                },
-                {
                     "key": "leader_roster",
                     "label": "View Roster",
                     "icon": "fas fa-users",
                     "url_name": "leaders:index",
                     "dynamic_kwargs": {"faction_slug": "profile.faction.slug"},
                 },
+                {"key": "leader_sep_manage", "separator": True},
                 {
                     "key": "leader_attendees",
                     "label": "Attendees",
@@ -106,6 +101,7 @@ MENU_REGISTRY = {
                     "url_name": "factions:manage",
                     "condition": is_leader_admin,
                 },
+                {"key": "leader_sep_resources", "separator": True},
                 {
                     "key": "leader_resources",
                     "label": "Faction Resources",
