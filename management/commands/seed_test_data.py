@@ -273,11 +273,44 @@ class TestDataBuilder:
             },
             label="Faction Quarters",
         )
+        leader_type = self._upsert(
+            QuartersType,
+            {"name": "Leader Quarters"},
+            {
+                "description": "Reserved for faction leaders.",
+                "organization": cascade,
+                "slug": "leader",
+            },
+            label="Leader Quarters",
+        )
+        attendee_type = self._upsert(
+            QuartersType,
+            {"name": "Attendee Quarters"},
+            {
+                "description": "Reserved for attendees.",
+                "organization": cascade,
+                "slug": "attendee",
+            },
+            label="Attendee Quarters",
+        )
+        faculty_type = self._upsert(
+            QuartersType,
+            {"name": "Faculty Quarters"},
+            {
+                "description": "Reserved for faculty assignments.",
+                "organization": cascade,
+                "slug": "faculty",
+            },
+            label="Faculty Quarters",
+        )
         self.quarters_types.update(
             {
                 "cabin": cabin_type,
                 "tent": tent_type,
                 "faction": faction_type,
+                "leader": leader_type,
+                "attendee": attendee_type,
+                "faculty": faculty_type,
             }
         )
 
@@ -339,6 +372,39 @@ class TestDataBuilder:
             },
             label="Summit Lodge - Faction",
         )
+        leader_quarters = self._upsert(
+            Quarters,
+            {"name": "Leader Cabins"},
+            {
+                "description": "Leader-only cabins near administration.",
+                "capacity": 20,
+                "type": leader_type,
+                "facility": river_bend,
+            },
+            label="Leader Cabins",
+        )
+        attendee_quarters = self._upsert(
+            Quarters,
+            {"name": "Attendee Tents"},
+            {
+                "description": "Standard attendee tent sites.",
+                "capacity": 80,
+                "type": attendee_type,
+                "facility": river_bend,
+            },
+            label="Attendee Tents",
+        )
+        faculty_quarters = self._upsert(
+            Quarters,
+            {"name": "Faculty Lodge"},
+            {
+                "description": "Faculty lodging with workspace.",
+                "capacity": 25,
+                "type": faculty_type,
+                "facility": summit_ridge,
+            },
+            label="Faculty Lodge",
+        )
         self.quarters.update(
             {
                 "pinecone": pinecone,
@@ -346,6 +412,9 @@ class TestDataBuilder:
                 "riverside": riverside,
                 "summit_lodge": summit_lodge,
                 "summit_lodge_faction": summit_lodge_faction,
+                "leader_quarters": leader_quarters,
+                "attendee_quarters": attendee_quarters,
+                "faculty_quarters": faculty_quarters,
             }
         )
 
