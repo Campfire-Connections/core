@@ -154,6 +154,15 @@ MENU_REGISTRY = {
             "condition": lambda user: is_faculty_admin(user) or is_department_admin(user),
             "children": [
                 {
+                    "key": "faculty_facility_manage",
+                    "label": "Manage Facility",
+                    "icon": "fas fa-warehouse",
+                    "url_name": "facilities:manage",
+                    "dynamic_kwargs": {"facility_slug": "profile.facility.slug"},
+                    "condition": is_faculty_admin,
+                },
+                {"separator": True},
+                {
                     "key": "faculty_new",
                     "label": "New Faculty",
                     "icon": "fas fa-plus-square",
@@ -168,6 +177,14 @@ MENU_REGISTRY = {
                     "dynamic_kwargs": {"facility_slug": "profile.facility.slug"},
                 },
                 {
+                    "key": "faculty_quarters",
+                    "label": "Manage Quarters",
+                    "icon": "fas fa-bed",
+                    "url_name": "quarters:index",
+                    "dynamic_kwargs": {"facility_slug": "profile.facility.slug"},
+                    "condition": is_faculty_admin,
+                },
+                {
                     "key": "faculty_departments",
                     "label": "Manage Departments",
                     "icon": "fas fa-sitemap",
@@ -175,6 +192,7 @@ MENU_REGISTRY = {
                     "dynamic_kwargs": {"facility_slug": "profile.facility.slug"},
                     "condition": is_department_admin,
                 },
+                {"separator": True},
                 {
                     "key": "faculty_reports",
                     "label": "Reports",
