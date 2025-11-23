@@ -210,7 +210,7 @@ MENU_REGISTRY = {
                     "key": "faculty_departments",
                     "label": "Manage Departments",
                     "icon": "fas fa-sitemap",
-                    "url_name": "departments:index",
+                    "url_name": "facilities:departments:index",
                     "dynamic_kwargs": {"facility_slug": "profile.facility.slug"},
                     "condition": is_department_admin,
                 },
