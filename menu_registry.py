@@ -24,7 +24,7 @@ MENU_REGISTRY = {
     "COMMON": [
         {
             "key": "dashboard",
-            "label": "",
+            "label": "dashboard",
             "icon": "fas fa-fire",
             "url_name": "dashboard",
         }
@@ -76,17 +76,24 @@ MENU_REGISTRY = {
                     "key": "leader_roster",
                     "label": "View Roster",
                     "icon": "fas fa-users",
-                    "url_name": "leaders:index",
+                    "url_name": "factions:roster",
+                    "dynamic_kwargs": {"slug": "profile.faction.slug"},
+                },
+                {
+                    "key": "leader_attendees",
+                    "label": "Manage Attendees",
+                    "icon": "fas fa-user-friends",
+                    "url_name": "factions:attendees:index",
+                    "dynamic_kwargs": {"slug": "profile.faction.slug"},
+                },
+                {
+                    "key": "leader_leaders",
+                    "label": "Manage Leaders",
+                    "icon": "fas fa-user-shield",
+                    "url_name": "factions:leaders:index",
                     "dynamic_kwargs": {"faction_slug": "profile.faction.slug"},
                 },
                 {"separator": True},
-                {
-                    "key": "leader_attendees",
-                    "label": "Attendees",
-                    "icon": "fas fa-user-friends",
-                    "url_name": "factions:attendees:index",
-                    "dynamic_kwargs": {"faction_slug": "profile.faction.slug"},
-                },
                 {
                     "key": "leader_enrollments",
                     "label": "Manage Enrollments",
@@ -94,6 +101,7 @@ MENU_REGISTRY = {
                     "url_name": "factions:enrollments:index",
                     "dynamic_kwargs": {"slug": "profile.faction.slug"},
                 },
+                {"separator": True},
                 {
                     "key": "leader_manage",
                     "label": "Manage Faction",
@@ -101,7 +109,6 @@ MENU_REGISTRY = {
                     "url_name": "factions:manage",
                     "condition": is_leader_admin,
                 },
-                {"separator": True},
                 {
                     "key": "leader_resources",
                     "label": "Faction Resources",
