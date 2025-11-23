@@ -346,8 +346,6 @@ def resolve_url(definition, base_context):
     for key, path in definition.get("dynamic_kwargs", {}).items():
         kwargs[key] = resolve_context(base_context, path)
     kwargs = {k: v for k, v in kwargs.items() if v is not None}
-    if "faction_slug" in kwargs and "slug" not in kwargs:
-        kwargs["slug"] = kwargs["faction_slug"]
     try:
         if kwargs:
             return reverse(url_name, kwargs=kwargs)
