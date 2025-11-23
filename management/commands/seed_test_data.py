@@ -802,6 +802,7 @@ class TestDataBuilder:
             defaults={
                 "organization": cascade,
                 "facility": river_bend,
+                "role": FacultyProfile.FacultyRole.ADMIN,
             },
         )
         self.faculty_profiles["summit_faculty"], _ = FacultyProfile.objects.update_or_create(
@@ -809,6 +810,7 @@ class TestDataBuilder:
             defaults={
                 "organization": cascade,
                 "facility": summit_ridge,
+                "role": FacultyProfile.FacultyRole.DEPARTMENT_ADMIN,
             },
         )
 
