@@ -245,24 +245,6 @@ class TestDataBuilder:
 
     def _create_quarters(self):
         cascade = self.orgs["cascade"]
-        cabin_type = self._upsert(
-            QuartersType,
-            {"name": "Cabin Village"},
-            {
-                "description": "Premium cabins used for faculty and leaders.",
-                "organization": cascade,
-            },
-            label="Cabin Village",
-        )
-        tent_type = self._upsert(
-            QuartersType,
-            {"name": "Tent Meadow"},
-            {
-                "description": "Canvas wall-tents near the training ranges.",
-                "organization": cascade,
-            },
-            label="Tent Meadow",
-        )
         faction_type = self._upsert(
             QuartersType,
             {"name": "Faction Quarters"},
@@ -305,8 +287,6 @@ class TestDataBuilder:
         )
         self.quarters_types.update(
             {
-                "cabin": cabin_type,
-                "tent": tent_type,
                 "faction": faction_type,
                 "leader": leader_type,
                 "attendee": attendee_type,
@@ -317,17 +297,6 @@ class TestDataBuilder:
         river_bend = self.facilities["river_bend"]
         summit_ridge = self.facilities["summit_ridge"]
 
-        pinecone = self._upsert(
-            Quarters,
-            {"name": "Pinecone Cabins"},
-            {
-                "description": "Cabin ring closest to the medical lodge.",
-                "capacity": 40,
-                "type": cabin_type,
-                "facility": river_bend,
-            },
-            label="Pinecone Cabins",
-        )
         pinecone_faction = self._upsert(
             Quarters,
             {"name": "Pinecone Cabins - Faction"},
@@ -338,28 +307,6 @@ class TestDataBuilder:
                 "facility": river_bend,
             },
             label="Pinecone Cabins - Faction",
-        )
-        riverside = self._upsert(
-            Quarters,
-            {"name": "Riverside Tents"},
-            {
-                "description": "Tents along the river bend boardwalk.",
-                "capacity": 60,
-                "type": tent_type,
-                "facility": river_bend,
-            },
-            label="Riverside Tents",
-        )
-        summit_lodge = self._upsert(
-            Quarters,
-            {"name": "Summit Lodge"},
-            {
-                "description": "Small lodge for leadership cohorts.",
-                "capacity": 30,
-                "type": cabin_type,
-                "facility": summit_ridge,
-            },
-            label="Summit Lodge",
         )
         summit_lodge_faction = self._upsert(
             Quarters,
@@ -407,10 +354,7 @@ class TestDataBuilder:
         )
         self.quarters.update(
             {
-                "pinecone": pinecone,
                 "pinecone_faction": pinecone_faction,
-                "riverside": riverside,
-                "summit_lodge": summit_lodge,
                 "summit_lodge_faction": summit_lodge_faction,
                 "leader_quarters": leader_quarters,
                 "attendee_quarters": attendee_quarters,
@@ -865,10 +809,8 @@ class TestDataBuilder:
     def _create_faction_enrollments(self):
         rb_session = self.facility_enrollments["river_bend"]
         summit_session = self.facility_enrollments["summit_ridge"]
-        pinecone = self.quarters.get("pinecone_faction") or self.quarters["pinecone"]
-        summit_lodge = (
-            self.quarters.get("summit_lodge_faction") or self.quarters["summit_lodge"]
-        )
+        pinecone = self.quarters.get("pinecone_faction")
+        summit_lodge = self.quarters.get("summit_lodge_faction")
 
         eagle_enrollment = self._upsert(
             FactionEnrollment,
@@ -903,9 +845,9 @@ class TestDataBuilder:
         )
 
     def _create_person_enrollments(self):
-        pinecone = self.quarters["pinecone"]
-        riverside = self.quarters["riverside"]
-        summit_lodge = self.quarters["summit_lodge"]
+        pinecone = self.quarters.get("pinecone_faction")
+        riverside = self.quarters.get("attendee_quarters")
+        summit_lodge = self.quarters.get("summit_lodge_faction")
         rb_session = self.facility_enrollments["river_bend"]
         leader_eagle = self.leader_profiles["eagle"]
         leader_aurora = self.leader_profiles["aurora"]
