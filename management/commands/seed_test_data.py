@@ -263,10 +263,21 @@ class TestDataBuilder:
             },
             label="Tent Meadow",
         )
+        faction_type = self._upsert(
+            QuartersType,
+            {"name": "Faction Quarters"},
+            {
+                "description": "Reserved quarters for faction cohorts.",
+                "organization": cascade,
+                "slug": "faction",
+            },
+            label="Faction Quarters",
+        )
         self.quarters_types.update(
             {
                 "cabin": cabin_type,
                 "tent": tent_type,
+                "faction": faction_type,
             }
         )
 
@@ -283,6 +294,17 @@ class TestDataBuilder:
                 "facility": river_bend,
             },
             label="Pinecone Cabins",
+        )
+        pinecone_faction = self._upsert(
+            Quarters,
+            {"name": "Pinecone Cabins - Faction"},
+            {
+                "description": "Faction-dedicated block of Pinecone Cabins.",
+                "capacity": 24,
+                "type": faction_type,
+                "facility": river_bend,
+            },
+            label="Pinecone Cabins - Faction",
         )
         riverside = self._upsert(
             Quarters,
@@ -306,11 +328,24 @@ class TestDataBuilder:
             },
             label="Summit Lodge",
         )
+        summit_lodge_faction = self._upsert(
+            Quarters,
+            {"name": "Summit Lodge - Faction"},
+            {
+                "description": "Reserved wing of Summit Lodge for faction cohorts.",
+                "capacity": 20,
+                "type": faction_type,
+                "facility": summit_ridge,
+            },
+            label="Summit Lodge - Faction",
+        )
         self.quarters.update(
             {
                 "pinecone": pinecone,
+                "pinecone_faction": pinecone_faction,
                 "riverside": riverside,
                 "summit_lodge": summit_lodge,
+                "summit_lodge_faction": summit_lodge_faction,
             }
         )
 
@@ -759,8 +794,10 @@ class TestDataBuilder:
     def _create_faction_enrollments(self):
         rb_session = self.facility_enrollments["river_bend"]
         summit_session = self.facility_enrollments["summit_ridge"]
-        pinecone = self.quarters["pinecone"]
-        summit_lodge = self.quarters["summit_lodge"]
+        pinecone = self.quarters.get("pinecone_faction") or self.quarters["pinecone"]
+        summit_lodge = (
+            self.quarters.get("summit_lodge_faction") or self.quarters["summit_lodge"]
+        )
 
         eagle_enrollment = self._upsert(
             FactionEnrollment,
