@@ -33,8 +33,8 @@ class SettingsMixin:
                 # If it's a method, call it to get the next object
                 next_obj = fallback_source()
             else:
-                # Otherwise, treat it as an attribute
-                next_obj = getattr(self, fallback_source, None)
+                # Otherwise, treat it as an attribute name
+                next_obj = getattr(self, str(fallback_source), None)
 
             if next_obj:
                 # Try to get the setting from the fallback object
@@ -55,5 +55,4 @@ class SettingsMixin:
         content_type = ContentType.objects.get_for_model(self.__class__)
         setting = Setting.objects.filter(content_type=content_type, object_id=self.pk, key=key).first()
         return setting.value if setting else None
-
 

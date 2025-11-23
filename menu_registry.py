@@ -81,14 +81,14 @@ MENU_REGISTRY = {
                 },
                 {
                     "key": "leader_attendees",
-                    "label": "Manage Attendees",
+                    "label": "View Attendees",
                     "icon": "fas fa-user-friends",
                     "url_name": "factions:attendees:index",
                     "dynamic_kwargs": {"faction_slug": "profile.faction.slug"},
                 },
                 {
                     "key": "leader_leaders",
-                    "label": "Manage Leaders",
+                    "label": "View Leaders",
                     "icon": "fas fa-user-shield",
                     "url_name": "factions:leaders:index",
                     "dynamic_kwargs": {"faction_slug": "profile.faction.slug"},
@@ -107,6 +107,7 @@ MENU_REGISTRY = {
                     "label": "Manage Faction",
                     "icon": "fas fa-cogs",
                     "url_name": "factions:manage",
+                    "dynamic_kwargs": {"faction_slug": "profile.faction.slug"},
                     "condition": is_leader_admin,
                 },
                 {
@@ -117,14 +118,14 @@ MENU_REGISTRY = {
                 },
             ],
         },
-        {
-            "key": "leader_quick",
-            "label": "Manage Enrollments",
-            "icon": "fas fa-calendar-alt",
-            "url_name": "factions:enrollments:index",
-            "dynamic_kwargs": {"slug": "profile.faction.slug"},
-            "group": "quick",
-        },
+        # {
+        #     "key": "leader_quick",
+        #     "label": "Manage Enrollments",
+        #     "icon": "fas fa-calendar-alt",
+        #     "url_name": "factions:enrollments:index",
+        #     "dynamic_kwargs": {"slug": "profile.faction.slug"},
+        #     "group": "quick",
+        # },
     ],
     "FACULTY": [
         {

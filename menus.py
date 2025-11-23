@@ -78,6 +78,7 @@ LEADER_ADMIN_MENU = [
     {
         "name": "Faction Management",
         "url_name": "factions:manage",
+        "dynamic_kwargs": {"faction_slug": "profile.faction.slug"},
         "icon": "fa-users",
     },
     {

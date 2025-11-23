@@ -22,16 +22,12 @@ from enrollment.models.facility import FacilityEnrollment
 from enrollment.models.temporal import Week, Period
 from enrollment.models.facility_class import FacilityClassEnrollment
 from enrollment.models.faction import FactionEnrollment
+from enrollment.models.availability import QuartersWeekAvailability
 from enrollment.models.faculty import FacultyEnrollment as FacultyEnrollmentRecord
 from enrollment.models.leader import LeaderEnrollment as LeaderEnrollmentRecord
 from enrollment.models.attendee import AttendeeEnrollment as AttendeeEnrollmentRecord
 from enrollment.models.enrollment import ActiveEnrollment, Enrollment as GenericEnrollment
-from user.models import (
-    User,
-    create_profile as create_profile_signal,
-    save_profile as save_profile_signal,
-    update_profile_slug as update_profile_slug_signal,
-)
+from user.models import User, ensure_profile
 
 
 @contextmanager
@@ -39,9 +35,7 @@ def muted_profile_signals():
     """Temporarily disconnect profile signals so we can assign relationships manually."""
 
     receivers = [
-        create_profile_signal,
-        save_profile_signal,
-        update_profile_slug_signal,
+        ensure_profile,
     ]
     for receiver in receivers:
         post_save.disconnect(receiver, sender=User)
@@ -114,6 +108,8 @@ class TestDataBuilder:
         self._create_users_and_profiles()
 
         self._log("Creating faction enrollments and personal assignments")
+        # Clear any existing quarters reservations to avoid conflicts on upsert
+        QuartersWeekAvailability.objects.all().delete()
         self._create_faction_enrollments()
         self._create_person_enrollments()
 
@@ -717,6 +713,7 @@ class TestDataBuilder:
             defaults={
                 "organization": cascade,
                 "faction": eagle,
+                "is_admin": True,
             },
         )
         self.leader_profiles["aurora"], _ = LeaderProfile.objects.update_or_create(
@@ -724,6 +721,7 @@ class TestDataBuilder:
             defaults={
                 "organization": cascade,
                 "faction": aurora,
+                "is_admin": False,
             },
         )
 
