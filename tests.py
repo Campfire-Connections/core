@@ -264,7 +264,7 @@ class MenuRegistryTests(BaseDomainTestCase):
         section = self._find_menu_item(menu_data["primary"], "Faction Mgmt")
         self.assertIsNotNone(section)
         enrollment_entry = next(
-            (child for child in section["children"] if child["label"] == "Manage Enrollments"),
+            (child for child in section["children"] if child.get("label") == "Manage Enrollments"),
             None,
         )
         self.assertIsNotNone(enrollment_entry)
@@ -274,7 +274,7 @@ class MenuRegistryTests(BaseDomainTestCase):
         menu_data = build_menu_for_user(self.leader_without_faction)
         section = self._find_menu_item(menu_data["primary"], "Faction Mgmt")
         enrollment_entry = next(
-            (child for child in section["children"] if child["label"] == "Manage Enrollments"),
+            (child for child in section["children"] if child.get("label") == "Manage Enrollments"),
             None,
         )
         self.assertIsNotNone(enrollment_entry)

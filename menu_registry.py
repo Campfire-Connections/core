@@ -24,7 +24,7 @@ MENU_REGISTRY = {
     "COMMON": [
         {
             "key": "dashboard",
-            "label": "Dashboard",
+            "label": "",
             "icon": "fas fa-fire",
             "url_name": "dashboard",
         }
@@ -283,9 +283,9 @@ def build_menu_for_user(user, favorites=None):
         entry = resolve_entry(definition, base_context)
         if not entry:
             continue
+        if entry.get("separator"):
+            continue
         if definition.get("group") == "quick":
-            if definition.get("separator"):
-                continue
             quick.append(entry)
             if entry.get("key"):
                 quick_keys.add(entry["key"])
@@ -309,6 +309,8 @@ def build_menu_for_user(user, favorites=None):
 
 
 def resolve_entry(definition, base_context):
+    if definition.get("separator"):
+        return {"separator": True}
     condition = definition.get("condition")
     if condition and not condition(base_context["user"]):
         return None
