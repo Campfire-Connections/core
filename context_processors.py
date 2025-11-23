@@ -86,7 +86,14 @@ def user_profile(request):
 def active_enrollment(request):
     if request.user.is_superuser:
         return {}
-    active_enrollment = ActiveEnrollment()
+    active_enrollment = ActiveEnrollment(
+        user=request.user if request.user.is_authenticated else None,
+        attendee_enrollment=None,
+        leader_enrollment=None,
+        faction_enrollment=None,
+        faculty_enrollment=None,
+        facility_enrollment=None,
+    )
     active_enrollment_id = request.session.get("active_enrollment_id")
     if active_enrollment_id:
         active_enrollment = (

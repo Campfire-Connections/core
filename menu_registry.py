@@ -1,4 +1,5 @@
 from django.urls import reverse, NoReverseMatch
+from core.utils import is_leader_admin
 
 
 def user_is_admin(user):
@@ -72,10 +73,24 @@ MENU_REGISTRY = {
             "icon": "fas fa-users",
             "children": [
                 {
+                    "key": "leader_dashboard",
+                    "label": "Dashboard",
+                    "icon": "fas fa-bullseye",
+                    "url_name": "leaders:dashboard",
+                },
+                {
                     "key": "leader_roster",
                     "label": "View Roster",
                     "icon": "fas fa-users",
                     "url_name": "leaders:index",
+                    "dynamic_kwargs": {"faction_slug": "profile.faction.slug"},
+                },
+                {
+                    "key": "leader_attendees",
+                    "label": "Attendees",
+                    "icon": "fas fa-user-friends",
+                    "url_name": "factions:attendees:index",
+                    "dynamic_kwargs": {"faction_slug": "profile.faction.slug"},
                 },
                 {
                     "key": "leader_enrollments",
@@ -83,6 +98,13 @@ MENU_REGISTRY = {
                     "icon": "fas fa-calendar-alt",
                     "url_name": "factions:enrollments:index",
                     "dynamic_kwargs": {"slug": "profile.faction.slug"},
+                },
+                {
+                    "key": "leader_manage",
+                    "label": "Manage Faction",
+                    "icon": "fas fa-cogs",
+                    "url_name": "factions:manage",
+                    "condition": is_leader_admin,
                 },
                 {
                     "key": "leader_resources",
@@ -94,9 +116,10 @@ MENU_REGISTRY = {
         },
         {
             "key": "leader_quick",
-            "label": "Faction Dashboard",
-            "icon": "fas fa-bullseye",
-            "url_name": "leaders:dashboard",
+            "label": "Manage Enrollments",
+            "icon": "fas fa-calendar-alt",
+            "url_name": "factions:enrollments:index",
+            "dynamic_kwargs": {"slug": "profile.faction.slug"},
             "group": "quick",
         },
     ],
@@ -275,7 +298,7 @@ def build_menu_for_user(user, favorites=None):
         if key in quick_keys:
             continue
         definition = flat_defs.get(key)
-        if not definition:
+        if not definition or key == "dashboard":
             continue
         entry = resolve_entry(definition, base_context)
         if entry and entry.get("url"):

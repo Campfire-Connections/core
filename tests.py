@@ -158,7 +158,14 @@ class ActiveEnrollmentContextProcessorTests(TestCase):
         self.assertEqual(enrollment.user_id, self.user.id)
 
     def test_uses_existing_session_record(self):
-        record = ActiveEnrollment.objects.create(user_id=self.user.id)
+        record = ActiveEnrollment.objects.create(
+            user_id=self.user.id,
+            attendee_enrollment=None,
+            leader_enrollment=None,
+            faction_enrollment=None,
+            faculty_enrollment=None,
+            facility_enrollment=None,
+        )
         request = self._build_request()
         request.session["active_enrollment_id"] = record.id
         context = active_enrollment_context(request)
@@ -276,7 +283,7 @@ class MenuRegistryTests(BaseDomainTestCase):
     def test_quick_menu_contains_shortcut(self):
         menu_data = build_menu_for_user(self.leader)
         self.assertTrue(
-            any(item["label"] == "Faction Dashboard" for item in menu_data["quick"])
+            any(item["label"] == "Manage Enrollments" for item in menu_data["quick"])
         )
 
     def test_favorite_entries_are_added_to_quick_menu(self):
