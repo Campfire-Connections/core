@@ -173,7 +173,7 @@ MENU_REGISTRY = {
                     "key": "faculty_new",
                     "label": "New Faculty",
                     "icon": "fas fa-plus-square",
-                    "url_name": "facilities:facultys:new",
+                    "url_name": "facilities:faculty:new",
                     "dynamic_kwargs": {"facility_slug": "profile.facility.slug"},
                 },
                 {
@@ -187,7 +187,7 @@ MENU_REGISTRY = {
                     "key": "faculty_quarters",
                     "label": "Manage Quarters",
                     "icon": "fas fa-bed",
-                    "url_name": "quarters:index",
+                    "url_name": "facilities:quarters:index",
                     "dynamic_kwargs": {"facility_slug": "profile.facility.slug"},
                     "condition": is_faculty_admin,
                 },
