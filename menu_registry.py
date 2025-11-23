@@ -1,5 +1,5 @@
 from django.urls import reverse, NoReverseMatch
-from core.utils import is_leader_admin
+from core.utils import is_leader_admin, is_faculty_admin, is_department_admin
 
 
 def user_is_admin(user):
@@ -98,7 +98,7 @@ MENU_REGISTRY = {
                     "key": "leader_enrollments",
                     "label": "Manage Enrollments",
                     "icon": "fas fa-calendar-alt",
-                    "url_name": "factions:enrollments:index",
+                    "url_name": "factions:enrollments_index",
                     "dynamic_kwargs": {"faction_slug": "profile.faction.slug"},
                 },
                 {"separator": True},
@@ -118,14 +118,14 @@ MENU_REGISTRY = {
                 },
             ],
         },
-        # {
-        #     "key": "leader_quick",
-        #     "label": "Manage Enrollments",
-        #     "icon": "fas fa-calendar-alt",
-        #     "url_name": "factions:enrollments:index",
-        #     "dynamic_kwargs": {"slug": "profile.faction.slug"},
-        #     "group": "quick",
-        # },
+        {
+            "key": "leader_quick",
+            "label": "Manage Enrollments",
+            "icon": "fas fa-calendar-alt",
+            "url_name": "factions:enrollments:index",
+            "dynamic_kwargs": {"faction_slug": "profile.faction.slug"},
+            "group": "quick",
+        },
     ],
     "FACULTY": [
         {
@@ -151,7 +151,7 @@ MENU_REGISTRY = {
             "key": "faculty_admin",
             "label": "Faculty Admin",
             "icon": "fas fa-user-cog",
-            "condition": user_is_admin,
+            "condition": lambda user: is_faculty_admin(user) or is_department_admin(user),
             "children": [
                 {
                     "key": "faculty_new",
@@ -166,6 +166,14 @@ MENU_REGISTRY = {
                     "icon": "fas fa-users-cog",
                     "url_name": "facilities:faculty:manage",
                     "dynamic_kwargs": {"facility_slug": "profile.facility.slug"},
+                },
+                {
+                    "key": "faculty_departments",
+                    "label": "Manage Departments",
+                    "icon": "fas fa-sitemap",
+                    "url_name": "departments:index",
+                    "dynamic_kwargs": {"facility_slug": "profile.facility.slug"},
+                    "condition": is_department_admin,
                 },
                 {
                     "key": "faculty_reports",
