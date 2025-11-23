@@ -158,7 +158,6 @@ MENU_REGISTRY = {
                     "label": "Manage Facility",
                     "icon": "fas fa-warehouse",
                     "url_name": "facilities:manage",
-                    "dynamic_kwargs": {"facility_slug": "profile.facility.slug"},
                     "condition": is_faculty_admin,
                 },
                 {
