@@ -41,6 +41,8 @@ def build_tables_from_config(request, tables_config, default_paginate=10):
                     table.add_url = table.get_url("add", context={})
             except Exception:
                 table.add_url = None
+        else:
+            table.add_url = None
 
         # Configure pagination
         if paginate_by:

@@ -11,7 +11,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.db.models.signals import post_save
 
-from organization.models import Organization
+from organization.models import Organization, OrganizationLabels
 from facility.models import Facility, Department, QuartersType, Quarters, FacultyProfile
 from faction.models import Faction, LeaderProfile, AttendeeProfile
 from course.models.course import Course
@@ -173,6 +173,16 @@ class TestDataBuilder:
                 "cascade": cascade,
             }
         )
+        self._ensure_org_labels()
+
+    def _ensure_org_labels(self):
+        """
+        Ensure each seeded organization has an OrganizationLabels instance populated.
+        This covers both newly created and pre-existing organizations that were updated.
+        """
+        for org in self.orgs.values():
+            labels, _ = OrganizationLabels.objects.get_or_create(organization=org)
+            labels.add_default_labels()
 
     def _create_facilities_and_departments(self):
         cascade = self.orgs["cascade"]
