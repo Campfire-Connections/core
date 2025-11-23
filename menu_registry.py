@@ -79,7 +79,7 @@ MENU_REGISTRY = {
                     "url_name": "leaders:index",
                     "dynamic_kwargs": {"faction_slug": "profile.faction.slug"},
                 },
-                {"key": "leader_sep_manage", "separator": True},
+                {"separator": True},
                 {
                     "key": "leader_attendees",
                     "label": "Attendees",
@@ -101,7 +101,7 @@ MENU_REGISTRY = {
                     "url_name": "factions:manage",
                     "condition": is_leader_admin,
                 },
-                {"key": "leader_sep_resources", "separator": True},
+                {"separator": True},
                 {
                     "key": "leader_resources",
                     "label": "Faction Resources",
@@ -284,6 +284,8 @@ def build_menu_for_user(user, favorites=None):
         if not entry:
             continue
         if definition.get("group") == "quick":
+            if definition.get("separator"):
+                continue
             quick.append(entry)
             if entry.get("key"):
                 quick_keys.add(entry["key"])
@@ -294,7 +296,7 @@ def build_menu_for_user(user, favorites=None):
         if key in quick_keys:
             continue
         definition = flat_defs.get(key)
-        if not definition or key == "dashboard":
+        if not definition or key == "dashboard" or definition.get("separator"):
             continue
         entry = resolve_entry(definition, base_context)
         if entry and entry.get("url"):
