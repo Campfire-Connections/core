@@ -157,7 +157,7 @@ DASHBOARD_REGISTRY = {
             "title": "Users",
             "options_provider": "get_admin_users_widget",
             "priority": 2,
-            "width": 12,
+            "width": 10,
         },
     ],
 }

@@ -103,7 +103,12 @@ class TableWidget(DashboardWidget):
         if not table_class or queryset is None:
             return {"table": None}
 
-        table = table_class(queryset, request=self.request)
+        user = getattr(self.request, "user", None)
+        try:
+            table = table_class(queryset, request=self.request, user=user)
+        except TypeError:
+            # Fallback for tables that don't accept a user kwarg
+            table = table_class(queryset, request=self.request)
         return {"table": table}
 
 

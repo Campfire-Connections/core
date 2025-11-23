@@ -6,6 +6,7 @@ from django.urls import reverse, NoReverseMatch
 from django.utils.safestring import mark_safe
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.text import camel_case_to_spaces
+from core.utils import is_leader_admin, is_faculty_admin, is_department_admin
 
 logger = logging.getLogger(__name__)
 
@@ -148,6 +149,14 @@ class ActionUrlMixin:
 
 class ActionsColumnMixin(ActionUrlMixin, tables.Table):
 
+    # Declare the column so the metaclass always knows about it
+    actions = tables.Column(
+        verbose_name="Actions",
+        orderable=False,
+        accessor="pk",
+        empty_values=(),
+    )
+
     available_actions = ["show", "edit", "delete"]  # Defaults
     action_icon_map = {
         "show": "eye",
@@ -197,8 +206,12 @@ class ActionsColumnMixin(ActionUrlMixin, tables.Table):
         return True
 
     def custom_permission_check(self, user, action):
-        return (user.user_type in ["LEADER", "FACULTY"] and user.is_admin) or (
-            action == "promote" and user.user_type in ["LEADER", "FACULTY"]
+        if not user:
+            return False
+        leader_admin = is_leader_admin(user)
+        faculty_admin = is_faculty_admin(user) or is_department_admin(user)
+        return leader_admin or faculty_admin or (
+            action == "promote" and user.user_type in ["LEADER", "FACULTY", "FACILITY_FACULTY"]
         )
 
     def render_actions(self, value, record):
@@ -220,21 +233,29 @@ class ActionsColumnMixin(ActionUrlMixin, tables.Table):
         """
         Dynamically add an 'actions' column to the table.
         """
-        if "actions" not in self.base_columns:
-            self.base_columns["actions"] = tables.TemplateColumn(
-                template_name="partials/tables/actions_column.html",
-                verbose_name="Actions",
-                orderable=False,
-                accessor="pk",
-            )
+        if "actions" in self.base_columns:
+            return
+
+        # Column already declared at class definition; keep for compatibility
+        self.base_columns["actions"] = self.actions
 
     def __init__(self, *args, user=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.user = user  # Store the user for permission checks in render
+        # Copy base_columns per-instance so we don't mutate the class definition
+        self.base_columns = self.base_columns.copy()
         if getattr(self, "available_actions", None):
             self.add_actions_column()
+            # Ensure actions isn't filtered out when Meta.fields is set
+            if getattr(self, "_meta", None) and getattr(self._meta, "fields", None):
+                if "actions" not in self._meta.fields:
+                    self._meta.fields = tuple(self._meta.fields) + ("actions",)
+        else:
+            # If no actions configured, drop the column entirely
+            self.base_columns.pop("actions", None)
 
-        if user and user.is_admin:
+        super().__init__(*args, **kwargs)
+        self.user = user  # Store the user for permission checks in render
+
+        if user and (user.is_admin or is_leader_admin(user) or is_faculty_admin(user)):
             self.add_admin_columns()
 
     def add_admin_columns(self):

@@ -8,9 +8,50 @@ from django.contrib.auth.mixins import (
 from django.contrib import messages
 from django.shortcuts import redirect
 from django.urls import reverse, NoReverseMatch
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
 from django.core.exceptions import PermissionDenied, ImproperlyConfigured
 from django.utils.translation import gettext_lazy as _
+
+
+# ---------------------------------------------------------------------
+# BaseSlugOrPkObjectMixin
+# ---------------------------------------------------------------------
+
+class BaseSlugOrPkObjectMixin:
+    """
+    Universal resolver for detail views that may be accessed by pk OR slug.
+
+    Child classes must define:
+        - object_pk_kwarg (e.g. "organization_id")
+        - object_slug_kwarg (e.g. "organization_slug")
+        - object_slug_field (defaults to "slug")
+    """
+
+    object_pk_kwarg = None
+    object_slug_kwarg = None
+    object_slug_field = "slug"
+
+    def get_object(self):
+        Model = self.model
+
+        # Prefer pk
+        if self.object_pk_kwarg:
+            pk_val = self.kwargs.get(self.object_pk_kwarg)
+            if pk_val:
+                return get_object_or_404(Model, pk=pk_val)
+
+        # Fallback to slug
+        if self.object_slug_kwarg:
+            slug_val = self.kwargs.get(self.object_slug_kwarg)
+            if slug_val:
+                return get_object_or_404(
+                    Model,
+                    **{self.object_slug_field: slug_val}
+                )
+
+        raise Http404(
+            f"{self.__class__.__name__} requires object_pk_kwarg or object_slug_kwarg."
+        )
 
 
 class LoginRequiredMixin(BaseLoginRequiredMixin):
@@ -402,3 +443,5 @@ class ActionContextMixin:
         if self.action:
             context["action"] = self.action
         return context
+
+

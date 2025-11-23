@@ -9,7 +9,7 @@ from django.urls import NoReverseMatch, reverse
 
 from enrollment.models.facility import FacilityEnrollment
 from enrollment.models.faction import FactionEnrollment
-from core.utils import get_info_row_data
+from core.utils import get_info_row_data, get_leader_profile, is_leader_admin
 from enrollment.models.enrollment import ActiveEnrollment
 from faction.models.faction import Faction
 from types import SimpleNamespace
@@ -201,9 +201,8 @@ def my_enrollments(request):
             enrollments["can_enroll_self"] = False
 
     # Leader Admin: Fetch faction enrollments
-    elif user.user_type == "LEADER" and user.is_admin:
-
-        leader_profile = getattr(user, "leaderprofile_profile", None)
+    elif is_leader_admin(user):
+        leader_profile = get_leader_profile(user)
 
         if leader_profile:
             # Fetch the faction associated with the leader

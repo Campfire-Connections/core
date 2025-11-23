@@ -16,15 +16,20 @@ from django.utils.translation import gettext_lazy as _
 from django.shortcuts import redirect, get_object_or_404
 from django_tables2 import SingleTableView, RequestConfig, SingleTableMixin
 from django.http import JsonResponse
+from django.core.exceptions import ImproperlyConfigured
 
 from django.utils.module_loading import import_string
+from django_tables2 import SingleTableView, MultiTableMixin
 
-from ..mixins.views import (
+from core.mixins.views import (
     FormMessagesMixin,
     BaseViewMixin,
     AjaxFormMixin,
     ActionContextMixin,
+    BaseSlugOrPkObjectMixin,
+    DynamicRedirectMixin
 )
+from core.mixins.forms import FormValidationMixin, SuccessMessageMixin
 from core.portals import get_portal_config
 from core.widgets import DashboardWidget
 from core.dashboard_registry import DASHBOARD_REGISTRY
@@ -225,6 +230,14 @@ class BaseTableListView(SingleTableView):
         table = super().get_table()
         table.paginate(page=self.request.GET.get("page", 1), per_page=10)
         return table
+
+    def get_table_kwargs(self):
+        """
+        Pass the current user into tables so action columns can render correctly.
+        """
+        kwargs = super().get_table_kwargs()
+        kwargs.setdefault("user", getattr(self.request, "user", None))
+        return kwargs
 
     def get_queryset(self):
         """
@@ -873,7 +886,9 @@ class BaseDashboardView(BaseManageView):
             if widget:
                 widgets.append(widget)
         widgets = self.apply_layout_order(widgets, preferences)
-        widgets.sort(key=lambda widget: widget.get("priority", 10))
+        # If the user has saved a custom layout, preserve that order; otherwise fall back to priority.
+        if not (preferences and preferences.layout):
+            widgets.sort(key=lambda widget: widget.get("priority", 10))
         return widgets
 
     def apply_layout_order(self, widgets, preferences):
@@ -903,4 +918,267 @@ class BaseDashboardView(BaseManageView):
         context["widgets"] = self.build_widgets()
         context["dashboard_portal_key"] = self.portal_key or "default"
         context["hidden_widgets"] = self.get_hidden_widget_metadata(preferences)
+        return context
+
+# ---------------------------------------------------------------------
+# BaseDetailWithTablesView
+# ---------------------------------------------------------------------
+
+class BaseDetailWithTablesView(BaseSlugOrPkObjectMixin, BaseDetailView):
+    """
+    Detail view that also renders related tables via a config dictionary.
+
+    Child classes define:
+        table_config = {
+            "departments": { "class": DepartmentTable, "queryset": qs },
+            "quarters":    { "class": QuartersTable,    "queryset": qs },
+            ...
+        }
+    """
+
+    table_config = {}
+
+    def get_tables_config(self):
+        return self.table_config
+
+    def get_tables(self):
+        return build_tables_from_config(
+            self.request,
+            self.get_tables_config(),
+            default_paginate=None,
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(self.get_tables())
+        return context
+
+# ---------------------------------------------------------------------
+# BaseChildCreateView
+# ---------------------------------------------------------------------
+
+class BaseChildCreateView(BaseCreateView):
+    """
+    Generic create view for 'child under parent' relationships.
+
+    Child classes must define:
+        parent_model  = Organization / Faction / Facility / Department
+        parent_kwarg  = "organization_slug", "slug", etc.
+        parent_field  = model field to assign (default: "parent")
+    """
+
+    parent_model = None
+    parent_kwarg = None
+    parent_field = "parent"
+
+    def get_parent_object(self):
+        slug_val = self.kwargs.get(self.parent_kwarg)
+        if not slug_val:
+            raise ImproperlyConfigured(
+                f"{self.__class__.__name__} requires parent_kwarg='{self.parent_kwarg}'."
+            )
+        return get_object_or_404(self.parent_model, slug=slug_val)
+
+    def get_initial(self):
+        initial = super().get_initial()
+        initial[self.parent_field] = self.get_parent_object()
+        return initial
+
+    def form_valid(self, form):
+        setattr(form.instance, self.parent_field, self.get_parent_object())
+        return super().form_valid(form)
+
+class BaseCRUDView(
+    BaseViewMixin,
+    DynamicRedirectMixin,
+    FormValidationMixin,
+    FormMessagesMixin,
+    AjaxFormMixin,
+):
+    """
+    Shared layer for Create/Update/Delete.
+    Automatically integrates:
+        - success messaging
+        - AJAX responses
+        - dynamic success url
+    """
+
+    template_name = "generic/form.html"
+
+
+class BaseCreateView(SuccessMessageMixin, BaseCRUDView, CreateView):
+    pass
+
+
+class BaseUpdateView(SuccessMessageMixin, BaseCRUDView, UpdateView):
+    pass
+
+
+class BaseDeleteView(SuccessMessageMixin, BaseCRUDView, DeleteView):
+    """
+    Will typically also be used with SoftDeleteMixin, but you attach that per-view.
+    """
+    template_name = "generic/confirm_delete.html"
+
+class BaseChildCreateView(BaseCreateView):
+    """
+    Generic handler for creating an object under a parent.
+    Child classes must define:
+        parent_model
+        parent_kwarg
+        parent_field (default: 'parent')
+    """
+
+    parent_model = None
+    parent_kwarg = None
+    parent_field = "parent"
+
+    def get_parent_object(self):
+        slug_val = self.kwargs[self.parent_kwarg]
+        return get_object_or_404(self.parent_model, slug=slug_val)
+
+    def get_initial(self):
+        initial = super().get_initial()
+        initial[self.parent_field] = self.get_parent_object()
+        return initial
+
+    def form_valid(self, form):
+        setattr(form.instance, self.parent_field, self.get_parent_object())
+        return super().form_valid(form)
+    
+class BaseIndexByFilterView(SingleTableView):
+    """
+    Common for:
+        - IndexByOrganization
+        - IndexByFacility
+        - IndexByFaction
+        - IndexByParent
+    Child classes define:
+        lookup_keys = ['organization_slug', 'organization_pk']
+        filter_model
+        filter_field
+        context_object_name_for_filter
+    """
+
+    lookup_keys = []
+    filter_model = None
+    filter_field = None
+    context_object_name_for_filter = None
+
+    def resolve_filter_object(self):
+        for key in self.lookup_keys:
+            value = self.kwargs.get(key)
+            if value:
+                field = "pk" if value.isdigit() else "slug"
+                return get_object_or_404(self.filter_model, **{field: value})
+        raise Http404("Filter object not found")
+
+    def get_queryset(self):
+        parent = self.resolve_filter_object()
+        return self.model.objects.filter(**{self.filter_field: parent})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context[self.context_object_name_for_filter] = self.resolve_filter_object()
+        return context
+    
+class BaseIndexByFilterView(SingleTableView):
+    """
+    Common for:
+        - IndexByOrganization
+        - IndexByFacility
+        - IndexByFaction
+        - IndexByParent
+    Child classes define:
+        lookup_keys = ['organization_slug', 'organization_pk']
+        filter_model
+        filter_field
+        context_object_name_for_filter
+    """
+
+    lookup_keys = []
+    filter_model = None
+    filter_field = None
+    context_object_name_for_filter = None
+
+    def resolve_filter_object(self):
+        for key in self.lookup_keys:
+            value = self.kwargs.get(key)
+            if value:
+                field = "pk" if value.isdigit() else "slug"
+                return get_object_or_404(self.filter_model, **{field: value})
+        raise Http404("Filter object not found")
+
+    def get_queryset(self):
+        parent = self.resolve_filter_object()
+        return self.model.objects.filter(**{self.filter_field: parent})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context[self.context_object_name_for_filter] = self.resolve_filter_object()
+        return context
+    
+class BaseDetailWithTablesView(BaseSlugOrPkObjectMixin, DetailView):
+    """
+    Provides multi-table rendering via get_tables_config()
+    """
+
+    table_config = {}
+
+    def get_tables_config(self):
+        return self.table_config
+
+    def build_tables(self):
+        from core.views.base_helpers import build_tables_from_config
+        # safe import (assuming you already have build_tables_from_config)
+        return build_tables_from_config(
+            self.request,
+            self.get_tables_config(),
+            default_paginate=None,
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(self.build_tables())
+        return context
+    
+class BaseManageView(MultiTableMixin, TemplateView):
+    """
+    Standard 'manage' dashboard.
+    Child must implement:
+        get_scope_object()
+        get_tables_config()
+    """
+
+    template_name = None
+
+    def get_scope_object(self):
+        raise NotImplementedError
+
+    def get_tables_config(self):
+        return {}
+
+    def build_tables(self):
+        from core.views.base_helpers import build_tables_from_config
+        return build_tables_from_config(
+            self.request, self.get_tables_config(), default_paginate=None
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        tables = self.build_tables()
+        formatted = []
+        for table in tables.values():
+            formatted.append({
+                "table": table,
+                "name": table.Meta.model._meta.verbose_name.title(),
+                "create_url": getattr(table, "add_url", None),
+                "icon": getattr(table, "add_icon", None),
+            })
+
+        context.update(
+            scope_object=self.get_scope_object(),
+            tables_with_names=formatted,
+        )
         return context
