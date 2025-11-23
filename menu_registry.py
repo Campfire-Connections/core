@@ -77,14 +77,14 @@ MENU_REGISTRY = {
                     "label": "View Roster",
                     "icon": "fas fa-users",
                     "url_name": "factions:roster",
-                    "dynamic_kwargs": {"slug": "profile.faction.slug"},
+                    "dynamic_kwargs": {"faction_slug": "profile.faction.slug"},
                 },
                 {
                     "key": "leader_attendees",
                     "label": "Manage Attendees",
                     "icon": "fas fa-user-friends",
                     "url_name": "factions:attendees:index",
-                    "dynamic_kwargs": {"slug": "profile.faction.slug"},
+                    "dynamic_kwargs": {"faction_slug": "profile.faction.slug"},
                 },
                 {
                     "key": "leader_leaders",
@@ -99,7 +99,7 @@ MENU_REGISTRY = {
                     "label": "Manage Enrollments",
                     "icon": "fas fa-calendar-alt",
                     "url_name": "factions:enrollments:index",
-                    "dynamic_kwargs": {"slug": "profile.faction.slug"},
+                    "dynamic_kwargs": {"faction_slug": "profile.faction.slug"},
                 },
                 {"separator": True},
                 {
