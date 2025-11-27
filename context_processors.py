@@ -86,6 +86,7 @@ def user_profile(request):
 def active_enrollment(request):
     if request.user.is_superuser:
         return {}
+    cache_key = None
     active_enrollment = ActiveEnrollment(
         user=request.user if request.user.is_authenticated else None,
         attendee_enrollment=None,
@@ -122,6 +123,9 @@ def active_enrollment(request):
         )
         active_enrollment.faction_enrollment.faction = faction
 
+    if request.user.is_authenticated:
+        cache_key = f"active_enrollment:{request.user.id}"
+        cache.set(cache_key, active_enrollment, 60)
     return {"active_enrollment": active_enrollment}
 
 
