@@ -6,34 +6,29 @@ from facility.models import Facility
 from enrollment.models.attendee_class import AttendeeClassEnrollment
 from enrollment.models.faculty import FacultyEnrollment
 from course.models.facility_class import FacilityClass
-
-CACHE_TIMEOUT = 60 * 5
-
-
-def cache_key(prefix, identifier):
-    return f"dashboard:{prefix}:{identifier}"
-
+from core.cache import cached, cache_key as shared_cache_key, CACHE_TIMEOUT
 
 def get_leader_metrics(faction: Faction):
     if not faction:
         return []
-    key = cache_key("leader_metrics", faction.pk)
-    metrics = cache.get(key)
-    if metrics is None:
-        metrics = [
+    key = shared_cache_key("leader_metrics", faction.pk)
+    return cached(
+        key,
+        CACHE_TIMEOUT,
+        lambda: [
             {"label": "Leaders", "value": faction.member_count(user_type="leader")},
             {"label": "Attendees", "value": faction.member_count(user_type="attendee")},
             {"label": "Sub-factions", "value": faction.children.count()},
-        ]
-        cache.set(key, metrics, CACHE_TIMEOUT)
-    return metrics
+        ],
+    )
 
 
 def get_leader_resource_links(faction: Faction | None):
-    key = cache_key("leader_resources", faction.pk if faction else "global")
-    resources = cache.get(key)
-    if resources is None:
-        resources = [
+    key = shared_cache_key("leader_resources", faction.pk if faction else "global")
+    return cached(
+        key,
+        CACHE_TIMEOUT,
+        lambda: [
             {
                 "title": "Faction Roster",
                 "subtitle": "Review attendee contact info.",
@@ -44,16 +39,16 @@ def get_leader_resource_links(faction: Faction | None):
                 "subtitle": "Confirm upcoming assignments.",
                 "url": "/leaders/manage/",
             },
-        ]
-        cache.set(key, resources, CACHE_TIMEOUT)
-    return resources
+        ],
+    )
 
 
 def get_attendee_resources(faction: Faction | None):
-    key = cache_key("attendee_resources", faction.pk if faction else "global")
-    resources = cache.get(key)
-    if resources is None:
-        resources = [
+    key = shared_cache_key("attendee_resources", faction.pk if faction else "global")
+    return cached(
+        key,
+        CACHE_TIMEOUT,
+        lambda: [
             {
                 "title": "Packing Checklist",
                 "subtitle": "Make sure you bring everything you need.",
@@ -64,19 +59,18 @@ def get_attendee_resources(faction: Faction | None):
                 "subtitle": "Review expectations before arrival.",
                 "url": "#",
             },
-        ]
-        cache.set(key, resources, CACHE_TIMEOUT)
-    return resources
+        ],
+    )
 
 
 def get_attendee_announcements(faction: Faction | None):
-    key = cache_key("attendee_announcements", faction.pk if faction else "global")
-    announcements = cache.get(key)
-    if announcements is None:
-        name = faction.name if faction else "camp"
-        announcements = [
+    key = shared_cache_key("attendee_announcements", faction.pk if faction else "global")
+    return cached(
+        key,
+        CACHE_TIMEOUT,
+        lambda: [
             {
-                "title": "Welcome to {}".format(name),
+                "title": f"Welcome to {faction.name if faction else 'camp'}",
                 "subtitle": "Orientation starts Monday at 9am.",
                 "meta": "",
             },
@@ -85,20 +79,19 @@ def get_attendee_announcements(faction: Faction | None):
                 "subtitle": "Quiet hours begin at 10pm.",
                 "meta": "",
             },
-        ]
-        cache.set(key, announcements, CACHE_TIMEOUT)
-    return announcements
+        ],
+    )
 
 
 def get_faculty_resources(facility: Facility | None):
-    key = cache_key("faculty_resources", facility.pk if facility else "global")
-    resources = cache.get(key)
-    if resources is None:
-        name = facility.name if facility else "your facility"
-        resources = [
+    key = shared_cache_key("faculty_resources", facility.pk if facility else "global")
+    return cached(
+        key,
+        CACHE_TIMEOUT,
+        lambda: [
             {
                 "title": "Upload Lesson Plans",
-                "subtitle": f"Share files with other instructors at {name}",
+                "subtitle": f"Share files with other instructors at {facility.name if facility else 'your facility'}",
                 "url": "#",
             },
             {
@@ -106,23 +99,22 @@ def get_faculty_resources(facility: Facility | None):
                 "subtitle": "See who else is teaching this session.",
                 "url": "#",
             },
-        ]
-        cache.set(key, resources, CACHE_TIMEOUT)
-    return resources
+        ],
+    )
 
 
 def get_facility_metrics(facility: Facility | None):
     if not facility:
         return []
-    key = cache_key("facility_metrics", facility.pk)
-    metrics = cache.get(key)
-    if metrics is None:
-        metrics = [
+    key = shared_cache_key("facility_metrics", facility.pk)
+    return cached(
+        key,
+        CACHE_TIMEOUT,
+        lambda: [
             {"label": "Departments", "value": facility.departments.count()},
             {"label": "Faculty", "value": facility.facultyprofile_set.count()},
-        ]
-        cache.set(key, metrics, CACHE_TIMEOUT)
-    return metrics
+        ],
+    )
 
 
 def get_facility_overview_text(facility: Facility | None):
@@ -138,20 +130,17 @@ def get_facility_overview_text(facility: Facility | None):
 def get_faction_enrollment_counts(faction: Faction):
     if not faction:
         return []
-    key = cache_key("leader_enrollments", faction.pk)
-    data = cache.get(key)
-    if data is None:
-        enrollments = (
-            faction.faction_enrollments.values("faction__name")
+    key = shared_cache_key("leader_enrollments", faction.pk)
+    return cached(
+        key,
+        CACHE_TIMEOUT,
+        lambda: [
+            {"label": item["faction__name"], "count": item["count"]}
+            for item in faction.faction_enrollments.values("faction__name")
             .annotate(count=Count("id"))
             .order_by("faction__name")
-        )
-        data = [
-            {"label": item["faction__name"], "count": item["count"]}
-            for item in enrollments
-        ]
-        cache.set(key, data, CACHE_TIMEOUT)
-    return data
+        ],
+    )
 
 
 def get_attendee_schedule(profile, faction_enrollment=None):
