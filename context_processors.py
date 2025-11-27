@@ -95,14 +95,15 @@ def active_enrollment(request):
         facility_enrollment=None,
     )
     active_enrollment_id = request.session.get("active_enrollment_id")
+    qs = ActiveEnrollment.objects.with_related()
     if active_enrollment_id:
         active_enrollment = (
-            ActiveEnrollment.objects.filter(id=active_enrollment_id).first()
+            qs.filter(id=active_enrollment_id).first()
             or active_enrollment
         )
     elif request.user.is_authenticated:
         active_enrollment = (
-            ActiveEnrollment.objects.filter(user_id=request.user.id).first()
+            qs.filter(user_id=request.user.id).first()
             or ActiveEnrollment(user_id=request.user.id)
         )
     if (
