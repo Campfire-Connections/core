@@ -61,7 +61,7 @@ class BreadcrumbMiddleware(MiddlewareMixin):
             plural_word = p.plural(word)
             return plural_word
         except Exception as e:
-            print(f"Error in pluralize_word: {e}")
+            logger.exception("Error in pluralize_word: %s", e)
             return word
 
     def should_skip_pluralization(self, segment, path, organization_labels):

@@ -1,5 +1,7 @@
 # pages/templatetags/my_filters.py
 
+import logging
+
 from django import template
 from django.template.defaultfilters import title
 from django.urls import reverse
@@ -8,6 +10,7 @@ import inflect
 
 register = template.Library()
 p = inflect.engine()
+logger = logging.getLogger(__name__)
 
 
 @register.simple_tag
@@ -41,8 +44,7 @@ def pluralize_word(word, capitalize=False):
             plural_word = plural_word.capitalize()
         return plural_word
     except Exception as e:
-        # Log the exception for debugging
-        print(f"Error in pluralize_word: {e}")
+        logger.exception("Error in pluralize_word: %s", e)
         return word  # Fallback to the original word if an error occurs
 
 
