@@ -3,6 +3,7 @@
 from django import template
 from django.template.defaultfilters import title
 from django.urls import reverse
+from django.utils.safestring import mark_safe
 import inflect
 
 register = template.Library()
@@ -74,3 +75,13 @@ def contains(collection, item):
         return item in collection
     except TypeError:
         return False
+
+
+@register.filter(name="nbsp")
+def nbsp(value):
+    """
+    Replace regular spaces with non-breaking spaces to keep labels on one line.
+    """
+    if value is None:
+        return ""
+    return mark_safe(str(value).replace(" ", "&nbsp;"))

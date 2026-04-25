@@ -3,7 +3,6 @@
 import logging
 
 
-from django.core.cache import cache
 from django.db.models import Q
 from django.urls import NoReverseMatch, reverse
 
@@ -86,7 +85,6 @@ def user_profile(request):
 def active_enrollment(request):
     if request.user.is_superuser:
         return {}
-    cache_key = None
     active_enrollment = ActiveEnrollment(
         user=request.user if request.user.is_authenticated else None,
         attendee_enrollment=None,
@@ -123,9 +121,6 @@ def active_enrollment(request):
         )
         active_enrollment.faction_enrollment.faction = faction
 
-    if request.user.is_authenticated:
-        cache_key = f"active_enrollment:{request.user.id}"
-        cache.set(cache_key, active_enrollment, 60)
     return {"active_enrollment": active_enrollment}
 
 
@@ -243,3 +238,11 @@ def my_enrollments(request):
             enrollments["can_enroll_self"] = False
 
     return {"my_enrollments": enrollments}
+
+
+def theme_mode(request):
+    """
+    Expose the user's theme preference from the session; defaults to light.
+    """
+    mode = request.session.get("theme", "light")
+    return {"theme_mode": mode}
