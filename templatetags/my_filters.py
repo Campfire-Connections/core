@@ -36,15 +36,15 @@ def pluralize_custom(value, word):
 @register.filter
 def pluralize_word(word, capitalize=False):
     if not isinstance(word, str):
-        raise ValueError("Input to pluralize_word must be a string.")
+        return ""
 
     try:
-        plural_word = p.plural(word)
+        plural_word = p.plural(str(word))
         if capitalize:
             plural_word = plural_word.capitalize()
         return plural_word
-    except Exception as e:
-        logger.exception("Error in pluralize_word: %s", e)
+    except Exception:
+        logger.debug("Unable to pluralize word: %r", word, exc_info=True)
         return word  # Fallback to the original word if an error occurs
 
 
