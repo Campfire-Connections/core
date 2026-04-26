@@ -64,7 +64,7 @@ class ActionUrlMixin:
         try:
             return reverse(url_name, kwargs=url_kwargs)
         except NoReverseMatch:
-            if self.debug_mode:
+            if getattr(self, "debug_mode", False):
                 logger.warning(
                     f"URL reverse failed for action '{action}' with kwargs {url_kwargs}"
                 )
