@@ -9,6 +9,8 @@ app relies on.
   timestamps, and settings.
 - View mixins (`core/mixins/views.py`) that scope requests to the active organization,
   facility, or faction and enforce portal-specific permissions.
+- Table/action mixins (`core/mixins/tables.py`) that generate row-level action links and safely
+  fall back when a route cannot be reversed.
 - Dashboard plumbing (`core/views/base.py`, `core/dashboard_registry.py`,
   `core/widgets.py`) that renders modular widgets with per-user layout preferences
   stored in `core.models.dashboard.DashboardLayout`.
@@ -27,6 +29,8 @@ app relies on.
   summaries, color palette, and info-row data into templates.
 - `views/base.py` – base classes for CRUD, manage, and dashboard views (includes
   layout persistence, widget rendering, and Ajax helpers).
+- `mixins/tables.py` – action URL generation, permission checks, and organization-aware table
+  labels.
 - `menu_registry.py` – declarative description of main/quick navigation links
   (supports conditions, nested menus, and favorite pinning).
 
