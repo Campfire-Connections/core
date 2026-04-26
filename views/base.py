@@ -11,6 +11,8 @@ from django.views.generic import (
     DeleteView,
     FormView,
 )
+import inspect
+
 from django.contrib import messages
 from django.utils.translation import gettext_lazy as _
 from django.shortcuts import redirect, get_object_or_404
@@ -236,7 +238,13 @@ class BaseTableListView(SingleTableView):
         Pass the current user into tables so action columns can render correctly.
         """
         kwargs = super().get_table_kwargs()
-        kwargs.setdefault("user", getattr(self.request, "user", None))
+        signature = inspect.signature(self.get_table_class().__init__)
+        accepts_kwargs = any(
+            param.kind == inspect.Parameter.VAR_KEYWORD
+            for param in signature.parameters.values()
+        )
+        if "user" in signature.parameters or accepts_kwargs:
+            kwargs.setdefault("user", getattr(self.request, "user", None))
         return kwargs
 
     def get_queryset(self):
