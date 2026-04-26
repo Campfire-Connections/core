@@ -19,6 +19,7 @@ from django.shortcuts import redirect, get_object_or_404
 from django_tables2 import SingleTableView, RequestConfig, SingleTableMixin
 from django.http import JsonResponse
 from django.core.exceptions import ImproperlyConfigured
+from django.http import Http404
 
 from django.utils.module_loading import import_string
 from django_tables2 import SingleTableView, MultiTableMixin
@@ -287,7 +288,7 @@ class BaseTableListView(SingleTableView):
         return context
 
 
-class BaseCreateView(
+class _LegacyBaseCreateView(
     AjaxFormMixin, FormMessagesMixin, CreateView, BaseViewMixin, ActionContextMixin
 ):
     """
@@ -335,7 +336,7 @@ class BaseCreateView(
         return super().form_invalid(form)
 
 
-class BaseUpdateView(FormMessagesMixin, UpdateView, BaseViewMixin, ActionContextMixin):
+class _LegacyBaseUpdateView(FormMessagesMixin, UpdateView, BaseViewMixin, ActionContextMixin):
     """
     Base class for updating views that provides success and error messages. This class extends the
     UpdateView and includes functionality for displaying messages upon successful or failed updates
@@ -351,7 +352,7 @@ class BaseUpdateView(FormMessagesMixin, UpdateView, BaseViewMixin, ActionContext
     error_message = _("There was an error updating the item.")
 
 
-class BaseDeleteView(DeleteView, BaseViewMixin, ActionContextMixin):
+class _LegacyBaseDeleteView(DeleteView, BaseViewMixin, ActionContextMixin):
     """
     Base class for delete views that provides success and error messages upon deletion. This
     class extends the DeleteView and includes functionality to display messages based on the
@@ -402,7 +403,7 @@ class BaseDeleteView(DeleteView, BaseViewMixin, ActionContextMixin):
             return redirect(self.get_success_url())
 
 
-class BaseManageView(TemplateView, ActionContextMixin):
+class _DashboardManageView(TemplateView, ActionContextMixin):
     """
     Base class for managing views that display multiple tables with associated configurations. This
     class extends TemplateView to provide functionality for initializing tables based on a
@@ -767,7 +768,7 @@ class BaseFormView(FormView, ActionContextMixin):
         raise NotImplementedError("No success_url specified for BaseFormView.")
 
 
-class BaseDashboardView(BaseManageView):
+class BaseDashboardView(_DashboardManageView):
     """
     BaseDashboardView: A view for displaying dashboard-like pages with dynamic widgets.
     Supports widgets as tables, charts, or text.
@@ -932,7 +933,7 @@ class BaseDashboardView(BaseManageView):
 # BaseDetailWithTablesView
 # ---------------------------------------------------------------------
 
-class BaseDetailWithTablesView(BaseSlugOrPkObjectMixin, BaseDetailView):
+class _LegacyBaseDetailWithTablesView(BaseSlugOrPkObjectMixin, BaseDetailView):
     """
     Detail view that also renders related tables via a config dictionary.
 
@@ -965,7 +966,7 @@ class BaseDetailWithTablesView(BaseSlugOrPkObjectMixin, BaseDetailView):
 # BaseChildCreateView
 # ---------------------------------------------------------------------
 
-class BaseChildCreateView(BaseCreateView):
+class _LegacyBaseChildCreateView(_LegacyBaseCreateView):
     """
     Generic create view for 'child under parent' relationships.
 
@@ -1053,42 +1054,6 @@ class BaseChildCreateView(BaseCreateView):
     def form_valid(self, form):
         setattr(form.instance, self.parent_field, self.get_parent_object())
         return super().form_valid(form)
-    
-class BaseIndexByFilterView(SingleTableView):
-    """
-    Common for:
-        - IndexByOrganization
-        - IndexByFacility
-        - IndexByFaction
-        - IndexByParent
-    Child classes define:
-        lookup_keys = ['organization_slug', 'organization_pk']
-        filter_model
-        filter_field
-        context_object_name_for_filter
-    """
-
-    lookup_keys = []
-    filter_model = None
-    filter_field = None
-    context_object_name_for_filter = None
-
-    def resolve_filter_object(self):
-        for key in self.lookup_keys:
-            value = self.kwargs.get(key)
-            if value:
-                field = "pk" if value.isdigit() else "slug"
-                return get_object_or_404(self.filter_model, **{field: value})
-        raise Http404("Filter object not found")
-
-    def get_queryset(self):
-        parent = self.resolve_filter_object()
-        return self.model.objects.filter(**{self.filter_field: parent})
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context[self.context_object_name_for_filter] = self.resolve_filter_object()
-        return context
     
 class BaseIndexByFilterView(SingleTableView):
     """
