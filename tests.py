@@ -9,7 +9,9 @@ from django.db.models.signals import post_save
 
 from organization.models import Organization
 from facility.models import Facility
+from facility.models.faculty import FacultyProfile
 from faction.models import Faction
+from faction.models.attendee import AttendeeProfile
 from faction.models.leader import LeaderProfile
 from course.models.course import Course
 from course.models.requirement import Requirement
@@ -25,6 +27,12 @@ from core.widgets import TextWidget
 from core.models.dashboard import DashboardLayout
 from core.models.navigation import NavigationPreference
 from core.menu_registry import build_menu_for_user
+from core.policies import (
+    can_manage_facility,
+    can_manage_faction,
+    visible_facilities_for_user,
+    visible_factions_for_user,
+)
 from user.models import ensure_profile as ensure_profile_signal
 User = get_user_model()
 
@@ -259,6 +267,7 @@ class MenuRegistryTests(BaseDomainTestCase):
                 return section
         return None
 
+
     def test_leader_menu_has_manage_enrollments_link(self):
         menu_data = build_menu_for_user(self.leader)
         section = self._find_menu_item(menu_data["primary"], "Faction Mgmt")
@@ -296,6 +305,95 @@ class MenuRegistryTests(BaseDomainTestCase):
         )
         self.assertIsNotNone(favorite_entry)
         self.assertTrue(favorite_entry.get("favorite"))
+
+
+class DataAccessPolicyTests(BaseDomainTestCase):
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.other_org = Organization.objects.create(
+            name="Other Council",
+            abbreviation="OC",
+            max_depth=5,
+        )
+        cls.other_facility = Facility.objects.create(
+            name="Other Training Center",
+            organization=cls.other_org,
+        )
+        cls.child_faction = Faction.objects.create(
+            name="Eagle Patrol Foxes",
+            organization=cls.organization,
+            parent=cls.faction,
+        )
+        cls.other_faction = Faction.objects.create(
+            name="Other Faction",
+            organization=cls.other_org,
+        )
+
+        with mute_profile_signals():
+            cls.admin_user = User.objects.create_superuser(
+                username="policy.admin",
+                email="policy.admin@example.com",
+                password="pass12345",
+            )
+            cls.faculty_admin = User.objects.create_user(
+                username="policy.faculty",
+                password="pass12345",
+                user_type=User.UserType.FACULTY,
+            )
+            cls.leader_admin = User.objects.create_user(
+                username="policy.leader",
+                password="pass12345",
+                user_type=User.UserType.LEADER,
+            )
+            cls.attendee = User.objects.create_user(
+                username="policy.attendee",
+                password="pass12345",
+                user_type=User.UserType.ATTENDEE,
+            )
+
+        FacultyProfile.objects.create(
+            user=cls.faculty_admin,
+            organization=cls.organization,
+            facility=cls.facility,
+            role=FacultyProfile.FacultyRole.ADMIN,
+        )
+        LeaderProfile.objects.create(
+            user=cls.leader_admin,
+            organization=cls.organization,
+            faction=cls.faction,
+            is_admin=True,
+        )
+        AttendeeProfile.objects.create(
+            user=cls.attendee,
+            organization=cls.organization,
+            faction=cls.child_faction,
+        )
+
+    def test_admin_can_see_all_facilities_and_factions(self):
+        self.assertEqual(visible_facilities_for_user(self.admin_user).count(), 2)
+        self.assertEqual(visible_factions_for_user(self.admin_user).count(), 3)
+
+    def test_faculty_admin_is_scoped_to_own_facility(self):
+        facilities = visible_facilities_for_user(self.faculty_admin)
+
+        self.assertQuerySetEqual(facilities, [self.facility], transform=lambda x: x)
+        self.assertTrue(can_manage_facility(self.faculty_admin, self.facility))
+        self.assertFalse(can_manage_facility(self.faculty_admin, self.other_facility))
+
+    def test_leader_admin_can_manage_own_faction_tree_only(self):
+        factions = visible_factions_for_user(self.leader_admin)
+
+        self.assertIn(self.faction, factions)
+        self.assertIn(self.child_faction, factions)
+        self.assertNotIn(self.other_faction, factions)
+        self.assertTrue(can_manage_faction(self.leader_admin, self.faction))
+        self.assertFalse(can_manage_faction(self.leader_admin, self.other_faction))
+
+    def test_attendee_can_view_own_faction_only(self):
+        factions = visible_factions_for_user(self.attendee)
+
+        self.assertQuerySetEqual(factions, [self.child_faction], transform=lambda x: x)
 
 
 class NavigationPreferenceModelTests(TestCase):
