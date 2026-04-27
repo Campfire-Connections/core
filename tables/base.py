@@ -3,7 +3,7 @@
 import logging
 import django_tables2 as tables
 
-from core.mixins.tables import ActionsColumnMixin, ActionUrlMixin
+from core.tables.actions import ActionsColumnMixin, ActionUrlMixin
 
 logger = logging.getLogger(__name__)
 
