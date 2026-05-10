@@ -28,13 +28,13 @@ urlpatterns = [
     # Static Pages
     path(
         "privacy-policy",
-        TemplateView.as_view(template_name="base/privacy_policy.html"),
+        TemplateView.as_view(template_name="privacy_policy.html"),
         name="privacy_policy",
     ),
     path(
-        "donate", TemplateView.as_view(template_name="base/donate.html"), name="donate"
+        "donate", TemplateView.as_view(template_name="donate.html"), name="donate"
     ),
-    path("about", TemplateView.as_view(template_name="base/about.html"), name="about"),
+    path("about", TemplateView.as_view(template_name="about.html"), name="about"),
     # Help Page
     path("help", views.help, name="help"),
     # Dynamic pages

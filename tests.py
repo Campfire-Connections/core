@@ -270,10 +270,10 @@ class MenuRegistryTests(BaseDomainTestCase):
 
     def test_leader_menu_has_manage_enrollments_link(self):
         menu_data = build_menu_for_user(self.leader)
-        section = self._find_menu_item(menu_data["primary"], "Faction Mgmt")
+        section = self._find_menu_item(menu_data["primary"], "Faction")
         self.assertIsNotNone(section)
         enrollment_entry = next(
-            (child for child in section["children"] if child.get("label") == "Manage Enrollments"),
+            (child for child in section["children"] if child.get("label") == "Enrollments"),
             None,
         )
         self.assertIsNotNone(enrollment_entry)
@@ -281,9 +281,9 @@ class MenuRegistryTests(BaseDomainTestCase):
 
     def test_leader_without_faction_gets_disabled_link(self):
         menu_data = build_menu_for_user(self.leader_without_faction)
-        section = self._find_menu_item(menu_data["primary"], "Faction Mgmt")
+        section = self._find_menu_item(menu_data["primary"], "Faction")
         enrollment_entry = next(
-            (child for child in section["children"] if child.get("label") == "Manage Enrollments"),
+            (child for child in section["children"] if child.get("label") == "Enrollments"),
             None,
         )
         self.assertIsNotNone(enrollment_entry)
@@ -292,7 +292,7 @@ class MenuRegistryTests(BaseDomainTestCase):
     def test_quick_menu_contains_shortcut(self):
         menu_data = build_menu_for_user(self.leader)
         self.assertTrue(
-            any(item["label"] == "Manage Enrollments" for item in menu_data["quick"])
+            any(item["label"] == "Faction Enrollments" for item in menu_data["quick"])
         )
 
     def test_favorite_entries_are_added_to_quick_menu(self):

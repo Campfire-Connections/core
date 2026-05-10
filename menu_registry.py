@@ -69,26 +69,26 @@ MENU_REGISTRY = {
     "LEADER": [
         {
             "key": "leader_portal",
-            "label": "Faction Mgmt",
+            "label": "Faction",
             "icon": "fas fa-users",
             "children": [
                 {
                     "key": "leader_roster",
-                    "label": "View Roster",
+                    "label": "Roster",
                     "icon": "fas fa-users",
                     "url_name": "factions:roster",
                     "dynamic_kwargs": {"faction_slug": "profile.faction.slug"},
                 },
                 {
                     "key": "leader_attendees",
-                    "label": "View Attendees",
+                    "label": "Attendees",
                     "icon": "fas fa-user-friends",
                     "url_name": "factions:attendees:index",
                     "dynamic_kwargs": {"faction_slug": "profile.faction.slug"},
                 },
                 {
                     "key": "leader_leaders",
-                    "label": "View Leaders",
+                    "label": "Leaders",
                     "icon": "fas fa-user-shield",
                     "url_name": "factions:leaders:index",
                     "dynamic_kwargs": {"faction_slug": "profile.faction.slug"},
@@ -96,7 +96,7 @@ MENU_REGISTRY = {
                 {"separator": True},
                 {
                     "key": "leader_enrollments",
-                    "label": "Manage Enrollments",
+                    "label": "Enrollments",
                     "icon": "fas fa-calendar-alt",
                     "url_name": "factions:enrollments_index",
                     "dynamic_kwargs": {"faction_slug": "profile.faction.slug"},
@@ -104,7 +104,7 @@ MENU_REGISTRY = {
                 {"separator": True},
                 {
                     "key": "leader_manage",
-                    "label": "Manage Faction",
+                    "label": "Settings",
                     "icon": "fas fa-cogs",
                     "url_name": "factions:manage",
                     "dynamic_kwargs": {"faction_slug": "profile.faction.slug"},
@@ -112,7 +112,7 @@ MENU_REGISTRY = {
                 },
                 {
                     "key": "leader_resources",
-                    "label": "Faction Resources",
+                    "label": "Resources",
                     "icon": "fas fa-book",
                     "url_name": "resources",
                 },
@@ -120,7 +120,7 @@ MENU_REGISTRY = {
         },
         {
             "key": "leader_quick",
-            "label": "Manage Enrollments",
+            "label": "Faction Enrollments",
             "icon": "fas fa-calendar-alt",
             "url_name": "factions:enrollments:index",
             "dynamic_kwargs": {"faction_slug": "profile.faction.slug"},
@@ -130,7 +130,7 @@ MENU_REGISTRY = {
     "FACULTY": [
         {
             "key": "faculty_portal",
-            "label": "Faculty Portal",
+            "label": "Faculty",
             "icon": "fas fa-chalkboard-teacher",
             "children": [
                 {
@@ -155,7 +155,7 @@ MENU_REGISTRY = {
             "children": [
                 {
                     "key": "faculty_facility_manage",
-                    "label": "Manage Facility",
+                    "label": "Facility",
                     "icon": "fas fa-warehouse",
                     "url_name": "facilities:manage",
                     "dynamic_kwargs": {"facility_slug": "profile.facility.slug"},
@@ -171,21 +171,21 @@ MENU_REGISTRY = {
                 {"separator": True},
                 {
                     "key": "faculty_new",
-                    "label": "New Faculty",
+                    "label": "Add Faculty",
                     "icon": "fas fa-plus-square",
                     "url_name": "facilities:faculty:new",
                     "dynamic_kwargs": {"facility_slug": "profile.facility.slug"},
                 },
                 {
                     "key": "faculty_manage",
-                    "label": "Manage Faculty",
+                    "label": "Faculty Directory",
                     "icon": "fas fa-users-cog",
                     "url_name": "facilities:faculty:manage",
                     "dynamic_kwargs": {"facility_slug": "profile.facility.slug"},
                 },
                 {
                     "key": "faculty_quarters",
-                    "label": "Manage Quarters",
+                    "label": "Quarters",
                     "icon": "fas fa-bed",
                     "url_name": "facilities:quarters:index",
                     "dynamic_kwargs": {"facility_slug": "profile.facility.slug"},
@@ -194,21 +194,21 @@ MENU_REGISTRY = {
                 {"separator": True},
                 {
                     "key": "faculty_courses",
-                    "label": "Manage Courses",
+                    "label": "Courses",
                     "icon": "fas fa-book",
                     "url_name": "facilities:courses:index",
                     "dynamic_kwargs": {"facility_slug": "profile.facility.slug"},
                 },
                 {
                     "key": "faculty_classes",
-                    "label": "Manage Classes",
+                    "label": "Classes",
                     "icon": "fas fa-chalkboard",
                     "url_name": "facilities:classes:index",
                     "dynamic_kwargs": {"facility_slug": "profile.facility.slug"},
                 },
                 {
                     "key": "faculty_departments",
-                    "label": "Manage Departments",
+                    "label": "Departments",
                     "icon": "fas fa-sitemap",
                     "url_name": "facilities:departments:index",
                     "dynamic_kwargs": {"facility_slug": "profile.facility.slug"},
@@ -225,7 +225,7 @@ MENU_REGISTRY = {
         },
         {
             "key": "faculty_quick",
-            "label": "Faculty Dashboard",
+            "label": "Faculty",
             "icon": "fas fa-graduation-cap",
             "url_name": "faculty:manage",
             "group": "quick",
@@ -234,7 +234,7 @@ MENU_REGISTRY = {
     "ADMIN": [
         {
             "key": "admin_tools",
-            "label": "Admin Tools",
+            "label": "Admin",
             "icon": "fas fa-tools",
             "children": [
                 {
@@ -245,31 +245,31 @@ MENU_REGISTRY = {
                 },
                 {
                     "key": "admin_users",
-                    "label": "Manage Users",
+                    "label": "Users",
                     "icon": "fas fa-users-cog",
                     "url_name": "admin_user_list",
                 },
                 {
                     "key": "admin_organizations",
-                    "label": "Manage Organizations",
+                    "label": "Organizations",
                     "icon": "fas fa-sitemap",
                     "url_name": "organization_index",
                 },
                 {
                     "key": "admin_facilities",
-                    "label": "Manage Facilities",
+                    "label": "Facilities",
                     "icon": "fas fa-campground",
                     "url_name": "facilities:index",
                 },
                 {
                     "key": "admin_factions",
-                    "label": "Manage Factions",
+                    "label": "Factions",
                     "icon": "fas fa-users",
                     "url_name": "factions:index",
                 },
                 {
                     "key": "admin_courses",
-                    "label": "Manage Courses",
+                    "label": "Courses",
                     "icon": "fas fa-book-reader",
                     "url_name": "courses:index",
                 },
