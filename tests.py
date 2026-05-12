@@ -245,6 +245,21 @@ class MenuRegistryTests(BaseDomainTestCase):
     def setUpTestData(cls):
         super().setUpTestData()
         with mute_profile_signals():
+            cls.attendee_user = User.objects.create_user(
+                username="attendee.menu",
+                password="pass12345",
+                user_type=User.UserType.ATTENDEE,
+            )
+            cls.faculty_user = User.objects.create_user(
+                username="faculty.menu",
+                password="pass12345",
+                user_type=User.UserType.FACULTY,
+            )
+            cls.department_admin = User.objects.create_user(
+                username="department.menu",
+                password="pass12345",
+                user_type=User.UserType.FACULTY,
+            )
             cls.leader = User.objects.create_user(
                 username="leader.menu",
                 password="pass12345",
@@ -259,6 +274,23 @@ class MenuRegistryTests(BaseDomainTestCase):
             user=cls.leader,
             organization=cls.organization,
             faction=cls.faction,
+        )
+        AttendeeProfile.objects.create(
+            user=cls.attendee_user,
+            organization=cls.organization,
+            faction=cls.faction,
+        )
+        FacultyProfile.objects.create(
+            user=cls.faculty_user,
+            organization=cls.organization,
+            facility=cls.facility,
+            role=FacultyProfile.FacultyRole.STAFF,
+        )
+        FacultyProfile.objects.create(
+            user=cls.department_admin,
+            organization=cls.organization,
+            facility=cls.facility,
+            role=FacultyProfile.FacultyRole.DEPARTMENT_ADMIN,
         )
 
     def _find_menu_item(self, menu, label):
@@ -305,6 +337,39 @@ class MenuRegistryTests(BaseDomainTestCase):
         )
         self.assertIsNotNone(favorite_entry)
         self.assertTrue(favorite_entry.get("favorite"))
+
+    def test_attendee_menu_uses_nested_attendee_enrollment_route(self):
+        menu_data = build_menu_for_user(self.attendee_user)
+        section = self._find_menu_item(menu_data["primary"], "My Profile")
+        self.assertIsNotNone(section)
+        schedule_entry = next(
+            (child for child in section["children"] if child.get("key") == "attendee_schedule"),
+            None,
+        )
+        self.assertIsNotNone(schedule_entry)
+        self.assertIn(f"/attendees/{self.attendee_user.get_profile().slug}/enrollments/", schedule_entry["url"])
+
+    def test_faculty_menu_uses_facility_scoped_routes(self):
+        menu_data = build_menu_for_user(self.faculty_user)
+        section = self._find_menu_item(menu_data["primary"], "Faculty")
+        self.assertIsNotNone(section)
+        entries = {child["key"]: child for child in section["children"]}
+
+        self.assertIn(f"/facilities/{self.facility.slug}/faculty/dashboard/", entries["faculty_schedule"]["url"])
+        self.assertIn(
+            f"/facilities/{self.facility.slug}/faculty/{self.faculty_user.get_profile().slug}/enrollments/",
+            entries["faculty_enrollments"]["url"],
+        )
+
+    def test_department_admin_menu_has_no_orphan_separators(self):
+        menu_data = build_menu_for_user(self.department_admin)
+        section = self._find_menu_item(menu_data["primary"], "Faculty Admin")
+        self.assertIsNotNone(section)
+        children = section["children"]
+        self.assertFalse(children[0].get("separator"))
+        self.assertFalse(children[-1].get("separator"))
+        for previous, current in zip(children, children[1:]):
+            self.assertFalse(previous.get("separator") and current.get("separator"))
 
 
 class DataAccessPolicyTests(BaseDomainTestCase):

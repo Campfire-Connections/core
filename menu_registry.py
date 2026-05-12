@@ -24,7 +24,7 @@ MENU_REGISTRY = {
     "COMMON": [
         {
             "key": "dashboard",
-            "label": "dashboard",
+            "label": "Dashboard",
             "icon": "fas fa-fire",
             "url_name": "dashboard",
         }
@@ -40,14 +40,14 @@ MENU_REGISTRY = {
                     "label": "My Schedule",
                     "icon": "fas fa-calendar",
                     "url_name": "attendees:enrollments:index",
-                    "dynamic_kwargs": {"slug": "profile.slug"},
+                    "dynamic_kwargs": {"attendee_slug": "profile.slug"},
                 },
                 {
                     "key": "attendee_enrollments",
                     "label": "My Enrollments",
                     "icon": "fas fa-user-check",
                     "url_name": "attendees:enrollments:index",
-                    "dynamic_kwargs": {"slug": "profile.slug"},
+                    "dynamic_kwargs": {"attendee_slug": "profile.slug"},
                 },
                 {
                     "key": "attendee_resources",
@@ -62,7 +62,7 @@ MENU_REGISTRY = {
             "label": "My Schedule",
             "icon": "fas fa-calendar",
             "url_name": "attendees:enrollments:index",
-            "dynamic_kwargs": {"slug": "profile.slug"},
+            "dynamic_kwargs": {"attendee_slug": "profile.slug"},
             "group": "quick",
         },
     ],
@@ -137,13 +137,18 @@ MENU_REGISTRY = {
                     "key": "faculty_schedule",
                     "label": "My Schedule",
                     "icon": "fas fa-calendar",
-                    "url_name": "faculty:manage",
+                    "url_name": "facilities:faculty:dashboard",
+                    "dynamic_kwargs": {"facility_slug": "profile.facility.slug"},
                 },
                 {
                     "key": "faculty_enrollments",
                     "label": "My Enrollments",
                     "icon": "fas fa-user-check",
-                    "url_name": "faculty:manage",
+                    "url_name": "facilities:faculty:enrollments:index",
+                    "dynamic_kwargs": {
+                        "facility_slug": "profile.facility.slug",
+                        "faculty_slug": "profile.slug",
+                    },
                 },
             ],
         },
@@ -227,7 +232,8 @@ MENU_REGISTRY = {
             "key": "faculty_quick",
             "label": "Faculty",
             "icon": "fas fa-graduation-cap",
-            "url_name": "faculty:manage",
+            "url_name": "facilities:faculty:dashboard",
+            "dynamic_kwargs": {"facility_slug": "profile.facility.slug"},
             "group": "quick",
         },
     ],
@@ -313,6 +319,24 @@ def clone_entry(entry):
     }
 
 
+def clean_children(children):
+    cleaned = []
+    last_was_separator = True
+    for child in children:
+        if child.get("separator"):
+            if last_was_separator:
+                continue
+            cleaned.append(child)
+            last_was_separator = True
+            continue
+        cleaned.append(child)
+        last_was_separator = False
+
+    while cleaned and cleaned[-1].get("separator"):
+        cleaned.pop()
+    return cleaned
+
+
 def flatten_definitions(definitions):
     flat = {}
     for definition in definitions:
@@ -377,6 +401,10 @@ def resolve_entry(definition, base_context):
         child_entry = resolve_entry(child_def, base_context)
         if child_entry:
             children.append(child_entry)
+    children = clean_children(children)
+
+    if definition.get("children") and not children and not url:
+        return None
 
     return {
         "key": definition.get("key"),
