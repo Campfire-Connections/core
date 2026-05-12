@@ -6,7 +6,7 @@ from django.contrib.auth.mixins import (
     LoginRequiredMixin as BaseLoginRequiredMixin,
 )
 from django.contrib import messages
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from django.urls import reverse, NoReverseMatch
 from django.http import JsonResponse, Http404
 from django.core.exceptions import PermissionDenied, ImproperlyConfigured
@@ -329,6 +329,11 @@ class PortalPermissionMixin(UserPassesTestMixin):
             return True
         return self.request.user.user_type in allowed
 
+    def handle_no_permission(self):
+        if self.request.user.is_authenticated:
+            return render(self.request, "errors/403.html", status=403)
+        return super().handle_no_permission()
+
 
 class ObjectPermissionRequiredMixin(PermissionRequiredMixin):
     def has_permission(self):
@@ -443,5 +448,4 @@ class ActionContextMixin:
         if self.action:
             context["action"] = self.action
         return context
-
 
